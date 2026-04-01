@@ -211,10 +211,10 @@ export default function App() {
           await signInAnonymously(auth);
         }
       } catch (error) {
-        // Ignore admin-restricted anonymous sign-in errors in local/dev environment.
+        // Ignore admin-restricted anonymous sign-in errors: fallback to login page instead of broken state.
         if (error && error.code === 'auth/admin-restricted-operation') {
           console.warn("Auth warning (non-fatal):", error.message || error);
-          setUser({ displayName: 'Guest', isAnonymous: true });
+          // no setUser here; onAuthStateChanged will remain null and AccountView prompts login.
         } else {
           console.error("Auth error:", error);
         }

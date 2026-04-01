@@ -4,6 +4,7 @@ import {
   AlertTriangle, CheckCircle, X, User, Clock, ShieldCheck, 
   Droplet, MapPin, Send, Menu, LogOut, Info, Mail, Star, ChevronLeft
 } from 'lucide-react';
+import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { 
   initializeApp 
 } from 'firebase/app';
@@ -220,7 +221,8 @@ export default function App() {
   const isPostView = currentView.startsWith('post-');
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col relative">
+    <HelmetProvider>
+      <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col relative">
       {/* HEADER */}
       <header className="bg-white shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -397,6 +399,7 @@ export default function App() {
         </div>
       </div>
     </div>
+  </HelmetProvider>
   );
 }
 
@@ -405,6 +408,34 @@ export default function App() {
 function HomeView({ navigate }) {
   return (
     <div className="animate-in fade-in duration-500">
+      <Helmet>
+        <title>DMVPipe - Honest Residential Plumbing in DMV Area</title>
+        <meta name="description" content="Family-owned residential plumbing services in Northern Virginia. Ganaa provides honest, reliable plumbing repairs and installations for homes in Arlington, Fairfax, and surrounding areas." />
+        <meta name="keywords" content="plumber DMV, residential plumbing Virginia, water heater repair, pipe repair, drain cleaning, plumbing emergency" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "LocalBusiness",
+            "name": "DMVPipe",
+            "description": "Family-owned residential plumbing services in Northern Virginia",
+            "url": "https://dmvpipe.com",
+            "telephone": "703-655-6351",
+            "address": {
+              "@type": "PostalAddress",
+              "addressRegion": "VA",
+              "addressCountry": "US"
+            },
+            "geo": {
+              "@type": "GeoCoordinates",
+              "latitude": 38.8951,
+              "longitude": -77.0369
+            },
+            "openingHours": "Mo-Su",
+            "priceRange": "$$",
+            "image": "https://dmvpipe.com/logo.png"
+          })}
+        </script>
+      </Helmet>
       <section className="relative bg-slate-900 text-white overflow-hidden">
         <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32 flex flex-col items-center text-center">
@@ -631,7 +662,7 @@ function BlogHubView({ navigate }) {
         {BLOG_POSTS.map(post => (
           <article key={post.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-lg transition-shadow">
             <div className="h-48 bg-slate-200 relative overflow-hidden cursor-pointer" onClick={() => navigate(`post-${post.slug}`)}>
-               <div className="absolute inset-0 bg-gradient-to-tr from-slate-800 to-slate-600 opacity-90"></div>
+               <div className="absolute inset-0 bg-linear-to-tr from-slate-800 to-slate-600 opacity-90"></div>
                <FileText className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 text-white/50" />
             </div>
             <div className="p-6 grow flex flex-col">

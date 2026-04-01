@@ -592,7 +592,6 @@ function AccountView({ user, db, appId }) {
 
   // Fetch appointments (Rule 3 and Rule 1 applied)
   useEffect(() => {
-    // If neither authenticated via real Firebase nor via simulation, stop loading
     if ((!user || user.isAnonymous) && !isSimulatedLogin) {
       setLoading(false);
       return;

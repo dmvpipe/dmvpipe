@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wrench, Home, Calendar, Phone, FileText, MessageSquare, 
   AlertTriangle, CheckCircle, X, User, Clock, ShieldCheck, 
-  Droplet, MapPin, Send, Menu, LogOut, Info, Mail, Star
+  Droplet, MapPin, Send, Menu, LogOut, Info, Mail, Star, ChevronLeft
 } from 'lucide-react';
 import { 
   initializeApp 
@@ -14,23 +14,24 @@ import {
 import { 
   getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, getDoc 
 } from 'firebase/firestore';
+import { getAnalytics } from "firebase/analytics";
 
 // --- FIREBASE INITIALIZATION ---
-const firebaseConfig = (typeof window !== 'undefined' && window.__firebase_config)
-  ? JSON.parse(window.__firebase_config)
-  : {
-      apiKey: "AIzaSyBro9UJnTwj8fghOL20fZOY1RxHglz7ZlA",
-      authDomain: "dmvpipe.firebaseapp.com",
-      projectId: "dmvpipe",
-      storageBucket: "dmvpipe.firebasestorage.app",
-      messagingSenderId: "203456030027",
-      appId: "1:203456030027:web:6ec775c724835976e0b4ce"
-    };
+const firebaseConfig = {
+  apiKey: "AIzaSyBro9UJnTwj8fghOL20fZOY1RxHglz7ZlA",
+  authDomain: "dmvpipe.firebaseapp.com",
+  projectId: "dmvpipe",
+  storageBucket: "dmvpipe.firebasestorage.app",
+  messagingSenderId: "203456030027",
+  appId: "1:203456030027:web:6ec775c724835976e0b4ce",
+  measurementId: "G-GJ4XHPCBDC"
+};
 
-const app = Object.keys(firebaseConfig).length > 0 ? initializeApp(firebaseConfig) : null;
+const app = initializeApp(firebaseConfig);
+const _analytics = getAnalytics(app);
 const auth = app ? getAuth(app) : null;
 const db = app ? getFirestore(app) : null;
-const appId = (typeof window !== 'undefined' && window.__app_id) ? window.__app_id : 'dmvpipe-app';
+const appId = 'dmvpipe-app';
 
 // --- DATA ---
 const VA_CITIES = [
@@ -47,14 +48,83 @@ const SERVICES = [
   { title: "Drain Cleaning", desc: "Clearing tough clogs from sinks, tubs, and main lines.", icon: <Droplet className="w-8 h-8 text-blue-500" /> }
 ];
 
+// EXPANDED BLOG POSTS WITH FULL CONTENT
 const BLOG_POSTS = [
-  { id: 1, title: "How to Prevent Frozen Pipes During Virginia Winters", date: "Nov 15, 2025", excerpt: "Winter in the DMV area can be harsh. Learn the top 3 ways to insulate your pipes and avoid a costly burst." },
-  { id: 2, title: "5 Signs Your Water Heater is Failing", date: "Oct 02, 2025", excerpt: "Don't wait for a cold shower. Look out for these warning signs that your water heater needs Ganaa's attention." },
-  { id: 3, title: "Why We Only Do Residential Plumbing", date: "Sep 18, 2025", excerpt: "By focusing entirely on homes, we bring specialized care and respect to your family's personal space." }
+  { 
+    id: 1, 
+    slug: "prevent-frozen-pipes-virginia",
+    title: "How to Prevent Frozen Pipes During Virginia Winters", 
+    date: "Nov 15, 2025", 
+    excerpt: "Winter in the DMV area can be harsh. Learn the top 3 ways to insulate your pipes and avoid a costly burst.",
+    content: (
+      <>
+        <p>Winter in the DMV area can bring sudden, freezing temperature drops that put your home's plumbing at serious risk. When water freezes inside a pipe, it expands, creating immense pressure that can cause even the strongest copper or PVC pipes to burst.</p>
+        <h4 className="text-xl font-bold text-slate-900 mt-8 mb-4">1. Insulate Exposed Pipes</h4>
+        <p>The most vulnerable pipes are those located in unheated areas of your home, such as basements, crawl spaces, attics, and garages. Use foam pipe insulation sleeves or heated tape to wrap these pipes securely.</p>
+        <h4 className="text-xl font-bold text-slate-900 mt-8 mb-4">2. Let the Faucets Drip</h4>
+        <p>If you know a deep freeze is coming overnight, turn on your faucets just enough to allow a slow, steady drip. Moving water is much less likely to freeze, and the open faucet provides relief for any pressure buildup inside the pipes.</p>
+        <h4 className="text-xl font-bold text-slate-900 mt-8 mb-4">3. Keep the Heat On</h4>
+        <p>If you are traveling for the holidays, do not turn your heater completely off. Leave it set to at least 55°F (13°C). Additionally, open cabinet doors under your kitchen and bathroom sinks to allow the warm air from your home to circulate around the pipes.</p>
+        <div className="bg-blue-50 border-l-4 border-blue-600 p-5 mt-10 rounded-r-lg">
+          <p className="font-bold text-blue-900 flex items-center gap-2"><AlertTriangle className="w-5 h-5"/> Emergency Tip</p>
+          <p className="text-blue-800 text-sm mt-2 leading-relaxed">If you turn on your faucet and nothing comes out, your pipe is likely already frozen. Locate your main water shut-off valve immediately to prevent flooding when it thaws, and contact DMVPipe right away.</p>
+        </div>
+      </>
+    )
+  },
+  { 
+    id: 2, 
+    slug: "signs-water-heater-failing",
+    title: "5 Signs Your Water Heater is Failing", 
+    date: "Oct 02, 2025", 
+    excerpt: "Don't wait for a cold shower. Look out for these warning signs that your water heater needs Ganaa's attention.",
+    content: (
+      <>
+        <p>Your water heater is one of the hardest-working appliances in your home, running 24/7 to ensure your family has warm water. Unfortunately, they don't last forever. Most traditional tank water heaters have a lifespan of 8 to 12 years. Here are the top signs that yours might be on its last legs.</p>
+        <ul className="space-y-6 mt-8">
+          <li>
+            <h4 className="text-lg font-bold text-slate-900">1. Strange Rumbling Noises</h4>
+            <p className="mt-2 text-slate-600">As water heaters age, sediment builds up at the bottom of the tank. When the heater runs, this sediment is heated and reheated, causing it to harden and bang against the sides of the tank.</p>
+          </li>
+          <li>
+            <h4 className="text-lg font-bold text-slate-900">2. Rusty or Discolored Water</h4>
+            <p className="mt-2 text-slate-600">If the hot water coming from your taps looks rusty or brownish, your tank may be rusting away from the inside. This is a major warning sign that a leak is imminent.</p>
+          </li>
+          <li>
+            <h4 className="text-lg font-bold text-slate-900">3. Not Enough Hot Water</h4>
+            <p className="mt-2 text-slate-600">If you find yourself running out of hot water faster than you used to, the heating element may be failing, or sediment may be taking up too much space in the tank.</p>
+          </li>
+          <li>
+            <h4 className="text-lg font-bold text-slate-900">4. Leaks Around the Base</h4>
+            <p className="mt-2 text-slate-600">Check the floor around your water heater. If you see pooling water, the metal tank expands and contracts with heat, eventually creating micro-fractures that leak.</p>
+          </li>
+        </ul>
+        <p className="mt-8 font-medium">If you notice any of these signs, don't wait for a total breakdown. Ganaa specializes in both traditional and modern tankless water heater replacements.</p>
+      </>
+    )
+  },
+  { 
+    id: 3, 
+    slug: "why-residential-plumbing-only",
+    title: "Why We Only Do Residential Plumbing", 
+    date: "Sep 18, 2025", 
+    excerpt: "By focusing entirely on homes, we bring specialized care and respect to your family's personal space.",
+    content: (
+      <>
+        <p>Many plumbing companies in the DMV area boast about handling "everything from giant corporate high-rises to tiny apartments." While that sounds impressive, at DMVPipe, we consciously made the decision to do the exact opposite.</p>
+        <p className="mt-4"><strong>We only service residential homes. Period.</strong></p>
+        <h4 className="text-xl font-bold text-slate-900 mt-8 mb-4">Focus Equals Excellence</h4>
+        <p>Commercial plumbing involves massive industrial boilers, miles of pipe networks, and dealing with property management conglomerates. It's a completely different skillset. By focusing strictly on residential plumbing, Ganaa has mastered the exact systems that power your family's daily life.</p>
+        <h4 className="text-xl font-bold text-slate-900 mt-8 mb-4">Respect for Your Space</h4>
+        <p>A home is not a construction site. We understand that we are stepping into your family's sanctuary. Because we only work in homes, we have strict protocols for cleanliness. We wear shoe covers, protect your flooring, and leave the workspace cleaner than we found it.</p>
+        <h4 className="text-xl font-bold text-slate-900 mt-8 mb-4">Direct Communication</h4>
+        <p>When you call a company that handles commercial contracts, you are often routed through dispatchers and junior technicians. At DMVPipe, you get personalized, direct service from a master plumber who treats your home like it was his own.</p>
+      </>
+    )
+  }
 ];
 
 export default function App() {
-  // NEW SEO ROUTER LOGIC: Read the URL to decide what page to show
   const [currentView, setCurrentView] = useState(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.substring(1);
@@ -68,7 +138,7 @@ export default function App() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
 
-  // SEO DYNAMIC META TAGS
+  // SEO DYNAMIC META TAGS & TITLE
   useEffect(() => {
     const formattedView = currentView.toLowerCase();
     let title = "DMVPipe - Ganaa's Plumbing | Residential Plumber in DMV";
@@ -86,11 +156,19 @@ export default function App() {
     } else if (formattedView === 'account') {
       title = "Customer Portal | Schedule Service with DMVPipe";
     } else if (VA_CITIES.map(c => c.toLowerCase().replace(/\s+/g, '-')).includes(formattedView)) {
-      // It's a city page! Format it nicely for Google.
+      // City Pages
       const cityIndex = VA_CITIES.findIndex(c => c.toLowerCase().replace(/\s+/g, '-') === formattedView);
       const cityName = VA_CITIES[cityIndex];
       title = `Plumber in ${cityName}, VA | DMVPipe Residential Services`;
       desc = `Looking for a trusted residential plumber in ${cityName}, Virginia? DMVPipe brings 15+ years of master plumbing experience directly to your home. Call 703-655-6351.`;
+    } else if (formattedView.startsWith('post-')) {
+      // DYNAMIC BLOG POST SEO
+      const slug = formattedView.replace('post-', '');
+      const post = BLOG_POSTS.find(p => p.slug === slug);
+      if (post) {
+        title = `${post.title} | DMVPipe Plumbing Blog`;
+        desc = post.excerpt;
+      }
     }
 
     document.title = title;
@@ -103,7 +181,6 @@ export default function App() {
     metaDesc.setAttribute("content", desc);
   }, [currentView]);
 
-  // Handle browser back/forward buttons
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname.substring(1) || 'home';
@@ -116,12 +193,10 @@ export default function App() {
   const navigate = (view) => {
     setCurrentView(view);
     setIsMobileMenuOpen(false);
-    // Push the new URL to the browser history
     window.history.pushState({}, '', `/${view === 'home' ? '' : view}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // --- AUTHENTICATION ---
   useEffect(() => {
     if (!auth) return;
     const initAuth = async () => {
@@ -140,9 +215,9 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Helper to check if current view is a city
   const isCityView = VA_CITIES.map(c => c.toLowerCase().replace(/\s+/g, '-')).includes(currentView.toLowerCase());
   const activeCityName = isCityView ? VA_CITIES.find(c => c.toLowerCase().replace(/\s+/g, '-') === currentView.toLowerCase()) : '';
+  const isPostView = currentView.startsWith('post-');
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col relative">
@@ -163,7 +238,7 @@ export default function App() {
             <nav className="hidden md:flex space-x-8 items-center">
               <button onClick={() => navigate('home')} className={`font-medium transition-colors ${currentView === 'home' ? 'text-blue-600' : 'text-slate-600 hover:text-blue-600'}`}>Home</button>
               <button onClick={() => navigate('services')} className={`font-medium transition-colors ${currentView === 'services' ? 'text-blue-600' : 'text-slate-600 hover:text-blue-600'}`}>Services</button>
-              <button onClick={() => navigate('blog')} className={`font-medium transition-colors ${currentView === 'blog' ? 'text-blue-600' : 'text-slate-600 hover:text-blue-600'}`}>Blog</button>
+              <button onClick={() => navigate('blog')} className={`font-medium transition-colors ${currentView.includes('blog') || currentView.includes('post-') ? 'text-blue-600' : 'text-slate-600 hover:text-blue-600'}`}>Blog</button>
               <button onClick={() => navigate('contact')} className={`font-medium transition-colors ${currentView === 'contact' ? 'text-blue-600' : 'text-slate-600 hover:text-blue-600'}`}>Contact</button>
               
               <div className="pl-4 border-l border-slate-200">
@@ -208,14 +283,16 @@ export default function App() {
       <main className="grow min-h-[60vh]">
         {currentView === 'home' && <HomeView navigate={navigate} />}
         {currentView === 'services' && <ServicesView navigate={navigate} />}
-        {currentView === 'blog' && <BlogView />}
+        {currentView === 'blog' && <BlogHubView navigate={navigate} />}
         {currentView === 'contact' && <ContactView navigate={navigate} />}
         {currentView === 'account' && <AccountView user={user} db={db} appId={appId} />}
+        
         {isCityView && <CityView navigate={navigate} city={activeCityName} />}
+        {isPostView && <BlogPostView navigate={navigate} slug={currentView.replace('post-', '')} />}
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-slate-900 text-slate-300 py-8 sm:py-12">
+      <footer className="bg-slate-900 text-slate-300 py-8 sm:py-12 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center mb-4">
@@ -294,7 +371,7 @@ export default function App() {
               </div>
               <button onClick={() => setIsChatOpen(false)} className="hover:bg-slate-800 p-1 rounded transition-colors"><X className="w-5 h-5"/></button>
             </div>
-            <ChatbotUI />
+            <ChatbotUI navigate={navigate} setIsChatOpen={setIsChatOpen} />
           </div>
         )}
 
@@ -329,7 +406,6 @@ function HomeView({ navigate }) {
   return (
     <div className="animate-in fade-in duration-500">
       <section className="relative bg-slate-900 text-white overflow-hidden">
-        {/* TODO: IMAGE/LOGO MARKER - HERO BACKGROUND IMAGE */}
         <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32 flex flex-col items-center text-center">
           <span className="bg-blue-600/20 text-blue-400 px-4 py-1.5 rounded-full text-sm font-semibold mb-6 border border-blue-500/30">
@@ -437,7 +513,6 @@ function CityView({ navigate, city }) {
   return (
     <div className="animate-in fade-in duration-500">
       <section className="relative bg-slate-900 text-white overflow-hidden">
-         {/* TODO: IMAGE/LOGO MARKER - CITY HERO BACKGROUND IMAGE */}
         <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 flex flex-col items-center text-center">
           <span className="bg-blue-600/20 text-blue-400 px-4 py-1.5 rounded-full text-sm font-semibold mb-6 border border-blue-500/30 flex items-center gap-2">
@@ -458,7 +533,7 @@ function CityView({ navigate, city }) {
       <section className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
          <h2 className="text-3xl font-bold text-slate-900 mb-6">Why {city} Homeowners Trust DMVPipe</h2>
          <p className="text-lg text-slate-600 max-w-3xl mx-auto">
-           When you need a reliable plumber in {city}, Virginia, you shouldn't have to deal with giant corporate dispatch centers. Ganaa brings 15+ years of direct, hands-on master plumbing experience right to your front door. Need emergency water heater repair in Arlington, VA? Ganaa provides same-day residential leak detection and drain cleaning. 
+           When you need a reliable plumber in {city}, Virginia, you shouldn't have to deal with giant corporate dispatch centers. Ganaa brings 15+ years of direct, hands-on master plumbing experience right to your front door.
          </p>
          <button onClick={() => navigate('services')} className="mt-8 text-blue-600 font-bold hover:underline">View All Residential Services &rarr;</button>
       </section>
@@ -500,27 +575,77 @@ function ServicesView({ navigate }) {
   );
 }
 
-function BlogView() {
+// --- NEW FULL ARTICLE COMPONENT ---
+function BlogPostView({ navigate, slug }) {
+  const post = BLOG_POSTS.find(p => p.slug === slug);
+
+  if (!post) {
+    return (
+      <div className="py-20 text-center">
+        <h2 className="text-2xl font-bold text-slate-900">Article not found</h2>
+        <button onClick={() => navigate('blog')} className="text-blue-600 mt-4 hover:underline">Return to Blog Hub</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-in fade-in duration-500 bg-white min-h-screen pb-20">
+      <div className="bg-slate-900 pt-16 pb-32 px-4">
+        <div className="max-w-3xl mx-auto text-center">
+          <button onClick={() => navigate('blog')} className="text-blue-400 font-medium text-sm flex items-center justify-center gap-1 mx-auto mb-6 hover:text-white transition-colors">
+            <ChevronLeft className="w-4 h-4"/> Back to Blog
+          </button>
+          <span className="text-slate-400 text-sm font-semibold tracking-wider uppercase">{post.date}</span>
+          <h1 className="text-3xl md:text-5xl font-extrabold text-white mt-4 leading-tight">{post.title}</h1>
+        </div>
+      </div>
+      
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 -mt-16 relative z-10">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 md:p-12 text-slate-700 leading-relaxed text-lg">
+          {/* This renders the custom HTML/JSX content we wrote in the BLOG_POSTS array */}
+          {post.content}
+        </div>
+        
+        <div className="mt-12 bg-blue-50 rounded-2xl p-8 text-center border border-blue-100">
+          <h3 className="text-xl font-bold text-blue-900 mb-2">Need a residential plumber?</h3>
+          <p className="text-blue-800 mb-6">Ganaa is ready to help you with any plumbing needs in the DMV area.</p>
+          <button onClick={() => navigate('account')} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-md transition-colors">
+            Schedule Service Now
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- UPDATED BLOG HUB COMPONENT ---
+function BlogHubView({ navigate }) {
   return (
     <div className="animate-in fade-in duration-500 py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="mb-12">
+      <div className="mb-12 text-center md:text-left">
         <h2 className="text-4xl font-extrabold text-slate-900 mb-4">Homeowner Advice Hub</h2>
         <p className="text-lg text-slate-600 max-w-2xl">Tips and tricks from 15+ years in the field to help you prevent emergencies and maintain your home's plumbing.</p>
       </div>
 
       <div className="grid md:grid-cols-3 gap-8">
         {BLOG_POSTS.map(post => (
-          <article key={post.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-            <div className="h-48 bg-slate-200 relative overflow-hidden">
-               {/* TODO: IMAGE/LOGO MARKER - BLOG POST IMAGE */}
-               <div className="absolute inset-0 bg-linear-to-tr from-slate-800 to-slate-600 opacity-90"></div>
+          <article key={post.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-lg transition-shadow">
+            <div className="h-48 bg-slate-200 relative overflow-hidden cursor-pointer" onClick={() => navigate(`post-${post.slug}`)}>
+               <div className="absolute inset-0 bg-gradient-to-tr from-slate-800 to-slate-600 opacity-90"></div>
                <FileText className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 text-white/50" />
             </div>
             <div className="p-6 grow flex flex-col">
               <span className="text-sm font-semibold text-blue-600 mb-2">{post.date}</span>
-              <h3 className="text-xl font-bold text-slate-900 mb-3 line-clamp-2">{post.title}</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-3 line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => navigate(`post-${post.slug}`)}>
+                {post.title}
+              </h3>
               <p className="text-slate-600 text-sm mb-6 grow">{post.excerpt}</p>
-              <button className="text-slate-900 font-bold text-sm hover:text-blue-600 transition-colors flex items-center gap-1 w-max">
+              
+              {/* UPDATED: This button now navigates to the real article */}
+              <button 
+                onClick={() => navigate(`post-${post.slug}`)} 
+                className="text-slate-900 font-bold text-sm hover:text-blue-600 transition-colors flex items-center gap-1 w-max"
+              >
                 Read Article <span className="text-lg leading-none">&rarr;</span>
               </button>
             </div>
@@ -587,7 +712,6 @@ function ContactView({ navigate }) {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">City in VA</label>
               <select required onChange={(e) => {
-                // Secret SEO feature: if they pick a city, offer to take them to that local page!
                 if(e.target.value) navigate(e.target.value.toLowerCase().replace(/\s+/g, '-'));
               }} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                 <option value="">Select your city...</option>
@@ -615,8 +739,8 @@ function AccountView({ user, db, appId }) {
   const [appointments, setAppointments] = useState([]);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const initialLoadRef = useRef(true);
 
-  // Google Login Integration
   const handleGoogleLogin = async (e) => {
     e.preventDefault();
     if (!auth) {
@@ -666,14 +790,18 @@ function AccountView({ user, db, appId }) {
 
     const unsubscribe = onSnapshot(q, 
       (snapshot) => {
-        setLoading(true);
         const apps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setAppointments(apps);
+        if (initialLoadRef.current) {
+          initialLoadRef.current = false;
+        }
         setLoading(false);
       },
       (error) => {
-        setLoading(true);
         console.error("Error fetching appointments:", error);
+        if (initialLoadRef.current) {
+          initialLoadRef.current = false;
+        }
         setLoading(false);
       }
     );

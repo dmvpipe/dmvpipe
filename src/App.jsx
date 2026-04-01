@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { 
   Wrench, Home, Calendar, Phone, FileText, MessageSquare, 
   AlertTriangle, CheckCircle, X, User, Clock, ShieldCheck, 
   Droplet, MapPin, Send, Menu, LogOut, Info, Mail, Star, ChevronLeft
 } from 'lucide-react';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
-import { 
-  initializeApp 
-} from 'firebase/app';
+import { initializeApp } from 'firebase/app';
 import { 
   getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut,
   GoogleAuthProvider, signInWithPopup
@@ -34,8 +31,6 @@ const _analytics = getAnalytics(app);
 const auth = app ? getAuth(app) : null;
 const db = app ? getFirestore(app) : null;
 const appId = 'dmvpipe-app';
-const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY || '';
-const IS_GEMINI_ENABLED = GEMINI_API_KEY.trim().length > 10;
 
 // --- DATA ---
 const VA_CITIES = [
@@ -52,7 +47,6 @@ const SERVICES = [
   { title: "Drain Cleaning", desc: "Clearing tough clogs from sinks, tubs, and main lines.", icon: <Droplet className="w-8 h-8 text-blue-500" /> }
 ];
 
-// EXPANDED BLOG POSTS WITH FULL CONTENT
 const BLOG_POSTS = [
   { 
     id: 1, 
@@ -142,7 +136,6 @@ export default function App() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
 
-  // SEO DYNAMIC META TAGS & TITLE
   useEffect(() => {
     const formattedView = currentView.toLowerCase();
     let title = "DMVPipe - Ganaa's Plumbing | Residential Plumber in DMV";
@@ -160,13 +153,11 @@ export default function App() {
     } else if (formattedView === 'account') {
       title = "Customer Portal | Schedule Service with DMVPipe";
     } else if (VA_CITIES.map(c => c.toLowerCase().replace(/\s+/g, '-')).includes(formattedView)) {
-      // City Pages
       const cityIndex = VA_CITIES.findIndex(c => c.toLowerCase().replace(/\s+/g, '-') === formattedView);
       const cityName = VA_CITIES[cityIndex];
       title = `Plumber in ${cityName}, VA | DMVPipe Residential Services`;
       desc = `Looking for a trusted residential plumber in ${cityName}, Virginia? DMVPipe brings 15+ years of master plumbing experience directly to your home. Call 703-655-6351.`;
     } else if (formattedView.startsWith('post-')) {
-      // DYNAMIC BLOG POST SEO
       const slug = formattedView.replace('post-', '');
       const post = BLOG_POSTS.find(p => p.slug === slug);
       if (post) {
@@ -211,10 +202,8 @@ export default function App() {
           await signInAnonymously(auth);
         }
       } catch (error) {
-        // Ignore admin-restricted anonymous sign-in errors: fallback to login page instead of broken state.
         if (error && error.code === 'auth/admin-restricted-operation') {
           console.warn("Auth warning (non-fatal):", error.message || error);
-          // no setUser here; onAuthStateChanged will remain null and AccountView prompts login.
         } else {
           console.error("Auth error:", error);
         }
@@ -232,7 +221,6 @@ export default function App() {
   return (
     <HelmetProvider>
       <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col relative">
-      {/* HEADER */}
       <header className="bg-white shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
@@ -240,7 +228,7 @@ export default function App() {
             <div className="flex items-center cursor-pointer gap-2 sm:gap-3" onClick={() => navigate('home')}>
               <img src="/logo.png" alt="DMVPipe" className="h-10 w-10 sm:h-12 sm:w-12 object-contain mr-2 sm:mr-3" />
               <div>
-                <h1 className="text-lg sm:text-2xl font-bold text-slate-900 leading-none tracking-tight">DMVPipe</h1>
+                <h1 className="text-lg sm:text-2xl font-bold text-black leading-none tracking-tight">DMVPipe</h1>
                 <p className="text-[10px] sm:text-xs text-blue-600 font-semibold tracking-wider uppercase mt-1">Ganaa's Plumbing</p>
               </div>
             </div>
@@ -344,7 +332,6 @@ export default function App() {
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-slate-800 text-xs sm:text-sm text-center text-slate-500 flex flex-col items-center">
           <p className="mb-2 sm:mb-4">&copy; {new Date().getFullYear()} DMVPipe - Ganaa's Plumbing. All rights reserved.</p>
-          {/* SEO Footer City Links */}
           <div className="flex flex-wrap justify-center gap-x-2 gap-y-1 sm:gap-x-3 text-[10px] sm:text-xs text-slate-600 max-w-4xl">
             {VA_CITIES.map(city => {
               const cityUrl = city.toLowerCase().replace(/\s+/g, '-');
@@ -382,7 +369,7 @@ export default function App() {
               </div>
               <button onClick={() => setIsChatOpen(false)} className="hover:bg-slate-800 p-1 rounded transition-colors"><X className="w-5 h-5"/></button>
             </div>
-            <ChatbotUI navigate={navigate} setIsChatOpen={setIsChatOpen} />
+            <ChatbotUI />
           </div>
         )}
 
@@ -396,7 +383,7 @@ export default function App() {
              <span className="hidden sm:inline">Emergency Help</span>
            </button>
           )}
-         
+          
           {!isChatOpen && !isEmergencyOpen && (
             <button 
               onClick={() => setIsChatOpen(true)}
@@ -548,7 +535,6 @@ function HomeView({ navigate }) {
   );
 }
 
-// SEO-friendly City Template Component
 function CityView({ navigate, city }) {
   return (
     <div className="animate-in fade-in duration-500">
@@ -615,7 +601,6 @@ function ServicesView({ navigate }) {
   );
 }
 
-// --- NEW FULL ARTICLE COMPONENT ---
 function BlogPostView({ navigate, slug }) {
   const post = BLOG_POSTS.find(p => p.slug === slug);
 
@@ -642,7 +627,6 @@ function BlogPostView({ navigate, slug }) {
       
       <div className="max-w-3xl mx-auto px-4 sm:px-6 -mt-16 relative z-10">
         <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 md:p-12 text-slate-700 leading-relaxed text-lg">
-          {/* This renders the custom HTML/JSX content we wrote in the BLOG_POSTS array */}
           {post.content}
         </div>
         
@@ -658,7 +642,6 @@ function BlogPostView({ navigate, slug }) {
   );
 }
 
-// --- UPDATED BLOG HUB COMPONENT ---
 function BlogHubView({ navigate }) {
   return (
     <div className="animate-in fade-in duration-500 py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -681,7 +664,6 @@ function BlogHubView({ navigate }) {
               </h3>
               <p className="text-slate-600 text-sm mb-6 grow">{post.excerpt}</p>
               
-              {/* UPDATED: This button now navigates to the real article */}
               <button 
                 onClick={() => navigate(`post-${post.slug}`)} 
                 className="text-slate-900 font-bold text-sm hover:text-blue-600 transition-colors flex items-center gap-1 w-max"
@@ -771,8 +753,6 @@ function ContactView({ navigate }) {
     </div>
   );
 }
-
-// --- ACCOUNT & SCHEDULING ---
 
 function AccountView({ user, db, appId }) {
   const [isSimulatedLogin, setIsSimulatedLogin] = useState(false);
@@ -1159,27 +1139,6 @@ function ChatbotUI() {
   const [leadInfo, setLeadInfo] = useState({ name: '', phone: '', email: '' });
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
-  const genAIRef = useRef(null);
-  const geminiStatus = IS_GEMINI_ENABLED ? 'online' : 'offline';
-
-  // Initialize Gemini AI
-  useEffect(() => {
-    const apiKey = GEMINI_API_KEY;
-    console.log('API Key exists:', !!apiKey);
-    console.log('API Key length:', apiKey?.length);
-
-    if (!IS_GEMINI_ENABLED) {
-      console.warn('VITE_GOOGLE_GEMINI_API_KEY is not set or invalid. Gemini chat is offline.');
-      return;
-    }
-
-    try {
-      genAIRef.current = new GoogleGenerativeAI(apiKey);
-      console.log('Gemini AI initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize Gemini:', error);
-    }
-  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1209,44 +1168,51 @@ When responding:
 - Always prioritize customer satisfaction and safety`;
 
   const callGeminiAPI = async (userMessage, conversationHistory) => {
-    try {
-      console.log('callGeminiAPI called with message:', userMessage);
-      console.log('genAIRef.current exists:', !!genAIRef.current);
-      
-      if (!genAIRef.current) {
-        console.error('genAIRef.current is not initialized');
-        return "I'm having trouble connecting to the AI service. Please call us at 703-655-6351 or try again in a moment.";
+    const apiKey = ""; // API key is populated at runtime by the execution environment
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+    const contents = conversationHistory
+      .filter((msg, index) => !(index === 0 && msg.isBot)) // Skip initial greeting
+      .map(msg => ({
+        role: msg.isBot ? "model" : "user",
+        parts: [{ text: msg.text }]
+      }));
+
+    contents.push({
+      role: "user",
+      parts: [{ text: userMessage }]
+    });
+
+    const payload = {
+      systemInstruction: { parts: [{ text: businessContext }] },
+      contents: contents
+    };
+
+    const delays = [1000, 2000, 4000, 8000, 16000];
+    let attempt = 0;
+
+    while (attempt < 6) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+        const result = await response.json();
+        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (text) return text;
+        throw new Error("No text in response");
+      } catch (error) {
+        if (attempt >= 5) {
+          return "I'm having trouble responding right now. Please call us at 703-655-6351 or try again later.";
+        }
+        await new Promise(res => setTimeout(res, delays[attempt]));
+        attempt++;
       }
-
-      const model = genAIRef.current.getGenerativeModel({ model: "gemini-1.5-flash" });
-      console.log('Model created successfully');
-      
-      // Filter out the initial bot message - only include actual conversation
-      // Must start with a user message for Gemini chat history
-      const validHistory = conversationHistory.filter((msg, index) => {
-        // Skip the first bot message (index 0)
-        if (index === 0 && msg.isBot) return false;
-        return true;
-      });
-
-      console.log('Filtered history length:', validHistory.length);
-      
-      const result = await model.generateContent({
-        contents: [
-          { role: "user", parts: [{ text: businessContext }] },
-          { role: "user", parts: [{ text: userMessage }] }
-        ]
-      });
-
-      const response = result.response.text();
-      console.log('Gemini response received:', response);
-
-      return response;
-    } catch (error) {
-      console.error('Gemini API Error:', error);
-      console.error('Error message:', error.message);
-      console.error('Error details:', error);
-      return "I'm having trouble responding right now. Please call us at 703-655-6351 or try again later.";
     }
   };
 
@@ -1280,11 +1246,6 @@ When responding:
   return (
     <div className="flex flex-col h-full bg-slate-50">
       <div className="grow overflow-y-auto p-4 space-y-3">
-        {geminiStatus !== 'online' && (
-          <div className="mb-2 px-3 py-2 text-xs bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg">
-            Gemini API key missing or invalid; chatbot is in fallback mode. Please set VITE_GOOGLE_GEMINI_API_KEY in .env.local and restart.
-          </div>
-        )}
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}>
             <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ${msg.isBot ? 'bg-white border border-slate-200 text-slate-800 rounded-tl-none' : 'bg-blue-600 text-white rounded-tr-none'}`}>
@@ -1367,5 +1328,5 @@ When responding:
         </form>
       </div>
     </div>
-  );
+  ); 
 }

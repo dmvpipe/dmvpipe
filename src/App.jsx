@@ -34,6 +34,8 @@ const _analytics = getAnalytics(app);
 const auth = app ? getAuth(app) : null;
 const db = app ? getFirestore(app) : null;
 const appId = 'dmvpipe-app';
+const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY || '';
+const IS_GEMINI_ENABLED = GEMINI_API_KEY.trim().length > 10;
 
 // --- DATA ---
 const VA_CITIES = [
@@ -212,6 +214,7 @@ export default function App() {
         // Ignore admin-restricted anonymous sign-in errors in local/dev environment.
         if (error && error.code === 'auth/admin-restricted-operation') {
           console.warn("Auth warning (non-fatal):", error.message || error);
+          setUser({ displayName: 'Guest', isAnonymous: true });
         } else {
           console.error("Auth error:", error);
         }
@@ -1149,7 +1152,7 @@ function EmergencyForm({ db, user, appId, onClose }) {
 
 function ChatbotUI() {
   const [messages, setMessages] = useState([
-    { text: "Hi! I'm the DMVPipe AI assistant powered by Google Gemini. How can I help you with your plumbing needs?", isBot: true }
+    { text: "Hi! I'm the DMVPipe AI assistant. How can I help you with your plumbing needs?", isBot: true }
   ]);
   const [input, setInput] = useState('');
   const [showLeadForm, setShowLeadForm] = useState(false);
@@ -1157,21 +1160,24 @@ function ChatbotUI() {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const genAIRef = useRef(null);
+  const geminiStatus = IS_GEMINI_ENABLED ? 'online' : 'offline';
 
   // Initialize Gemini AI
   useEffect(() => {
-    const apiKey = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY;
+    const apiKey = GEMINI_API_KEY;
     console.log('API Key exists:', !!apiKey);
     console.log('API Key length:', apiKey?.length);
-    if (apiKey) {
-      try {
-        genAIRef.current = new GoogleGenerativeAI(apiKey);
-        console.log('Gemini AI initialized successfully');
-      } catch (error) {
-        console.error('Failed to initialize Gemini:', error);
-      }
-    } else {
-      console.error('VITE_GOOGLE_GEMINI_API_KEY is not set');
+
+    if (!IS_GEMINI_ENABLED) {
+      console.warn('VITE_GOOGLE_GEMINI_API_KEY is not set or invalid. Gemini chat is offline.');
+      return;
+    }
+
+    try {
+      genAIRef.current = new GoogleGenerativeAI(apiKey);
+      console.log('Gemini AI initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize Gemini:', error);
     }
   }, []);
 
@@ -1274,6 +1280,11 @@ When responding:
   return (
     <div className="flex flex-col h-full bg-slate-50">
       <div className="grow overflow-y-auto p-4 space-y-3">
+        {geminiStatus !== 'online' && (
+          <div className="mb-2 px-3 py-2 text-xs bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg">
+            Gemini API key missing or invalid; chatbot is in fallback mode. Please set VITE_GOOGLE_GEMINI_API_KEY in .env.local and restart.
+          </div>
+        )}
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}>
             <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ${msg.isBot ? 'bg-white border border-slate-200 text-slate-800 rounded-tl-none' : 'bg-blue-600 text-white rounded-tr-none'}`}>

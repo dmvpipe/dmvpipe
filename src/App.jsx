@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wrench, Home, Calendar, Phone, FileText, MessageSquare, 
   AlertTriangle, CheckCircle, X, User, Clock, ShieldCheck, 
-  Droplet, MapPin, Send, Menu, LogOut, Info, Mail
+  Droplet, MapPin, Send, Menu, LogOut, Info, Mail, Star
 } from 'lucide-react';
 import { 
   initializeApp 
@@ -12,27 +12,25 @@ import {
   GoogleAuthProvider, signInWithPopup
 } from 'firebase/auth';
 import { 
-  getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp 
+  getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, getDoc 
 } from 'firebase/firestore';
-import { getAnalytics } from "firebase/analytics";
 
 // --- FIREBASE INITIALIZATION ---
-const firebaseConfig = {
-  apiKey: "AIzaSyBro9UJnTwj8fghOL20fZOY1RxHglz7ZlA",
-  authDomain: "dmvpipe.firebaseapp.com",
-  projectId: "dmvpipe",
-  storageBucket: "dmvpipe.firebasestorage.app",
-  messagingSenderId: "203456030027",
-  appId: "1:203456030027:web:6ec775c724835976e0b4ce",
-  measurementId: "G-GJ4XHPCBDC"
-};
+const firebaseConfig = (typeof window !== 'undefined' && window.__firebase_config)
+  ? JSON.parse(window.__firebase_config)
+  : {
+      apiKey: "AIzaSyBro9UJnTwj8fghOL20fZOY1RxHglz7ZlA",
+      authDomain: "dmvpipe.firebaseapp.com",
+      projectId: "dmvpipe",
+      storageBucket: "dmvpipe.firebasestorage.app",
+      messagingSenderId: "203456030027",
+      appId: "1:203456030027:web:6ec775c724835976e0b4ce"
+    };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const _analytics = getAnalytics(app);
+const app = Object.keys(firebaseConfig).length > 0 ? initializeApp(firebaseConfig) : null;
 const auth = app ? getAuth(app) : null;
 const db = app ? getFirestore(app) : null;
-const appId = 'dmvpipe-app';
+const appId = (typeof window !== 'undefined' && window.__app_id) ? window.__app_id : 'dmvpipe-app';
 
 // --- DATA ---
 const VA_CITIES = [
@@ -56,13 +54,72 @@ const BLOG_POSTS = [
 ];
 
 export default function App() {
-  const [currentView, setCurrentView] = useState('home');
+  // NEW SEO ROUTER LOGIC: Read the URL to decide what page to show
+  const [currentView, setCurrentView] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname.substring(1);
+      return path || 'home';
+    }
+    return 'home';
+  });
+
   const [user, setUser] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
-  // Floating Widgets State
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
+
+  // SEO DYNAMIC META TAGS
+  useEffect(() => {
+    const formattedView = currentView.toLowerCase();
+    let title = "DMVPipe - Ganaa's Plumbing | Residential Plumber in DMV";
+    let desc = "Family-owned residential plumbing services in the DMV area. 15+ years of master plumbing experience.";
+
+    if (formattedView === 'services') {
+      title = "Residential Plumbing Services | DMVPipe Northern VA";
+      desc = "Expert leak detection, water heater repair, pipe replacement, and drain cleaning strictly for residential homes in Northern VA.";
+    } else if (formattedView === 'contact') {
+      title = "Contact DMVPipe | 24/7 Emergency Plumbing in DMV";
+      desc = "Call 703-655-6351 for fast, reliable residential plumbing. Serving Arlington, Alexandria, Fairfax, and 17 more cities.";
+    } else if (formattedView === 'blog') {
+      title = "Plumbing Tips & Blog | DMVPipe";
+      desc = "Learn how to maintain your home's plumbing, prevent frozen pipes, and spot water heater issues early.";
+    } else if (formattedView === 'account') {
+      title = "Customer Portal | Schedule Service with DMVPipe";
+    } else if (VA_CITIES.map(c => c.toLowerCase().replace(/\s+/g, '-')).includes(formattedView)) {
+      // It's a city page! Format it nicely for Google.
+      const cityIndex = VA_CITIES.findIndex(c => c.toLowerCase().replace(/\s+/g, '-') === formattedView);
+      const cityName = VA_CITIES[cityIndex];
+      title = `Plumber in ${cityName}, VA | DMVPipe Residential Services`;
+      desc = `Looking for a trusted residential plumber in ${cityName}, Virginia? DMVPipe brings 15+ years of master plumbing experience directly to your home. Call 703-655-6351.`;
+    }
+
+    document.title = title;
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.name = "description";
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute("content", desc);
+  }, [currentView]);
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.substring(1) || 'home';
+      setCurrentView(path);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigate = (view) => {
+    setCurrentView(view);
+    setIsMobileMenuOpen(false);
+    // Push the new URL to the browser history
+    window.history.pushState({}, '', `/${view === 'home' ? '' : view}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // --- AUTHENTICATION ---
   useEffect(() => {
@@ -83,11 +140,9 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const navigate = (view) => {
-    setCurrentView(view);
-    setIsMobileMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  // Helper to check if current view is a city
+  const isCityView = VA_CITIES.map(c => c.toLowerCase().replace(/\s+/g, '-')).includes(currentView.toLowerCase());
+  const activeCityName = isCityView ? VA_CITIES.find(c => c.toLowerCase().replace(/\s+/g, '-') === currentView.toLowerCase()) : '';
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col relative">
@@ -96,15 +151,11 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
-            <div className="flex items-center cursor-pointer" onClick={() => navigate('home')}>
-              {/* TODO: IMAGE/LOGO MARKER - HEADER LOGO */}
-              {<img src="/logo.png" alt="DMVPipe" className="h-10 w-auto mr-3" />}
-              <div className="bg-blue-600 p-2 rounded-lg mr-3">
-                <Wrench className="w-6 h-6 text-white" />
-              </div>
+            <div className="flex items-center cursor-pointer gap-2 sm:gap-3" onClick={() => navigate('home')}>
+              <img src="/logo.png" alt="DMVPipe" className="h-10 w-10 sm:h-12 sm:w-12 object-contain mr-2 sm:mr-3 rounded-lg shadow-md bg-white p-1" />
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 leading-none tracking-tight">DMVPipe</h1>
-                <p className="text-xs text-blue-600 font-semibold tracking-wider uppercase mt-1">Ganaa's Plumbing</p>
+                <h1 className="text-lg sm:text-2xl font-bold text-slate-900 leading-none tracking-tight">DMVPipe</h1>
+                <p className="text-[10px] sm:text-xs text-blue-600 font-semibold tracking-wider uppercase mt-1">Ganaa's Plumbing</p>
               </div>
             </div>
 
@@ -120,8 +171,12 @@ export default function App() {
                   onClick={() => navigate('account')} 
                   className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-full font-medium hover:bg-slate-800 transition-colors"
                 >
-                  <User className="w-4 h-4" />
-                  {user && !user.isAnonymous ? "My Account" : "Login / Book"}
+                  {user && !user.isAnonymous && user.photoURL ? (
+                    <img src={user.photoURL} alt="User" className="w-5 h-5 rounded-full" />
+                  ) : (
+                    <User className="w-4 h-4" />
+                  )}
+                  {user && !user.isAnonymous ? "My Dashboard" : "Login / Book"}
                 </button>
               </div>
             </nav>
@@ -142,7 +197,7 @@ export default function App() {
             <button onClick={() => navigate('contact')} className="block w-full text-left py-3 px-4 rounded-lg hover:bg-slate-50 font-medium text-slate-700">Contact</button>
             <div className="pt-2">
               <button onClick={() => navigate('account')} className="flex items-center justify-center gap-2 w-full bg-blue-600 text-white py-3 rounded-lg font-medium">
-                <User className="w-5 h-5" /> Account / Booking
+                <User className="w-5 h-5" /> {user && !user.isAnonymous ? "My Dashboard" : "Account / Booking"}
               </button>
             </div>
           </div>
@@ -150,26 +205,25 @@ export default function App() {
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-grow">
+      <main className="grow min-h-[60vh]">
         {currentView === 'home' && <HomeView navigate={navigate} />}
-        {currentView === 'services' && <ServicesView />}
+        {currentView === 'services' && <ServicesView navigate={navigate} />}
         {currentView === 'blog' && <BlogView />}
-        {currentView === 'contact' && <ContactView />}
+        {currentView === 'contact' && <ContactView navigate={navigate} />}
         {currentView === 'account' && <AccountView user={user} db={db} appId={appId} />}
-        {/* Dynamic routing for SEO City Pages */}
-        {currentView.startsWith('city-') && <CityView navigate={navigate} city={currentView.replace('city-', '')} />}
+        {isCityView && <CityView navigate={navigate} city={activeCityName} />}
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-slate-900 text-slate-300 py-12">
+      <footer className="bg-slate-900 text-slate-300 py-8 sm:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center mb-4">
-              <Wrench className="w-6 h-6 text-blue-500 mr-2" />
-              <h2 className="text-xl font-bold text-white">DMVPipe</h2>
+              <img src="/logo.png" alt="DMVPipe" className="h-8 w-8 object-contain mr-2 rounded bg-white p-1" />
+              <h2 className="text-lg sm:text-xl font-bold text-white">DMVPipe</h2>
             </div>
-            <p className="text-sm mb-4">Ganaa's Family Owned Plumbing. Serving the DMV area with 15+ years of trusted residential experience.</p>
-            <p className="text-sm flex items-center gap-2 text-slate-400">
+            <p className="text-xs sm:text-sm mb-4">Ganaa's Family Owned Plumbing. Serving the DMV area with 15+ years of trusted residential experience.</p>
+            <p className="text-xs sm:text-sm flex items-center gap-2 text-slate-400">
               <ShieldCheck className="w-4 h-4" /> Licensed & Insured
             </p>
           </div>
@@ -200,23 +254,24 @@ export default function App() {
             </ul>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-slate-800 text-sm text-center text-slate-500 flex flex-col items-center">
-          <p className="mb-4">&copy; {new Date().getFullYear()} DMVPipe - Ganaa's Plumbing. All rights reserved.</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-slate-800 text-xs sm:text-sm text-center text-slate-500 flex flex-col items-center">
+          <p className="mb-2 sm:mb-4">&copy; {new Date().getFullYear()} DMVPipe - Ganaa's Plumbing. All rights reserved.</p>
           {/* SEO Footer City Links */}
-          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-slate-600 max-w-4xl">
-            {VA_CITIES.map(city => (
-              <button key={city} onClick={() => navigate(`city-${city}`)} className="hover:text-white transition-colors">
-                Plumber in {city}
-              </button>
-            ))}
+          <div className="flex flex-wrap justify-center gap-x-2 gap-y-1 sm:gap-x-3 text-[10px] sm:text-xs text-slate-600 max-w-4xl">
+            {VA_CITIES.map(city => {
+              const cityUrl = city.toLowerCase().replace(/\s+/g, '-');
+              return (
+                <button key={city} onClick={() => navigate(cityUrl)} className="hover:text-white transition-colors px-1 sm:px-2 py-0.5">
+                  Plumber in {city}
+                </button>
+              )
+            })}
           </div>
         </div>
       </footer>
 
       {/* FLOATING WIDGETS */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
-        
-        {/* Emergency Popup Window */}
         {isEmergencyOpen && (
           <div className="bg-white rounded-2xl shadow-2xl border border-red-100 w-80 sm:w-96 overflow-hidden animate-in slide-in-from-bottom-5">
             <div className="bg-red-600 text-white p-4 flex justify-between items-center">
@@ -230,7 +285,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Chatbot Window */}
         {isChatOpen && !isEmergencyOpen && (
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-80 sm:w-96 h-96 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5">
             <div className="bg-slate-900 text-white p-4 flex justify-between items-center">
@@ -244,7 +298,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Floating Buttons */}
         <div className="flex gap-3">
           {!isEmergencyOpen && (
              <button 
@@ -275,15 +328,14 @@ export default function App() {
 function HomeView({ navigate }) {
   return (
     <div className="animate-in fade-in duration-500">
-      {/* Hero Section */}
       <section className="relative bg-slate-900 text-white overflow-hidden">
         {/* TODO: IMAGE/LOGO MARKER - HERO BACKGROUND IMAGE */}
-        {/* Replace the Unsplash URL inside url('') with your own hero image path, e.g. url('/hero-plumbing.jpg') */}
         <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32 flex flex-col items-center text-center">
           <span className="bg-blue-600/20 text-blue-400 px-4 py-1.5 rounded-full text-sm font-semibold mb-6 border border-blue-500/30">
             Family Owned & Operated
           </span>
+          <img src="/logo.png" alt="DMVPipe Logo" className="h-16 w-16 sm:h-20 sm:w-20 object-contain mb-6 rounded-lg shadow-lg bg-white p-2" />
           <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 max-w-4xl">
             Honest Residential Plumbing for the <span className="text-blue-500">DMV Area</span>
           </h1>
@@ -301,7 +353,6 @@ function HomeView({ navigate }) {
         </div>
       </section>
 
-      {/* Trust Bar */}
       <section className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
@@ -329,7 +380,6 @@ function HomeView({ navigate }) {
         </div>
       </section>
 
-      {/* Service Area */}
       <section className="py-20 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col lg:flex-row">
@@ -339,9 +389,12 @@ function HomeView({ navigate }) {
                 <h2 className="text-3xl font-bold mb-4">Our Service Area</h2>
                 <p className="text-slate-300 mb-8">We proudly serve 20 cities and counties in Northern Virginia, providing rapid response to communities closest to Washington D.C.</p>
                 <div className="flex flex-wrap gap-2">
-                  {VA_CITIES.slice(0, 8).map(city => (
-                    <button onClick={() => navigate(`city-${city}`)} key={city} className="bg-white/10 px-3 py-1 rounded-full text-sm font-medium border border-white/10 hover:bg-white/20 transition-colors cursor-pointer">{city}</button>
-                  ))}
+                  {VA_CITIES.slice(0, 8).map(city => {
+                    const cityUrl = city.toLowerCase().replace(/\s+/g, '-');
+                    return (
+                      <button onClick={() => navigate(cityUrl)} key={city} className="bg-white/10 px-3 py-1 rounded-full text-sm font-medium border border-white/10 hover:bg-white/20 transition-colors cursor-pointer">{city}</button>
+                    )
+                  })}
                   <span className="bg-blue-600 px-3 py-1 rounded-full text-sm font-medium">...and 12 more!</span>
                 </div>
                </div>
@@ -394,7 +447,7 @@ function CityView({ navigate, city }) {
             Honest Residential Plumbing for <span className="text-blue-500">{city}</span> Homes
           </h1>
           <p className="text-lg md:text-xl text-slate-300 mb-10 max-w-2xl">
-            Ganaa provides master-level plumbing services strictly for residential homes in {city} and the greater DMV area.
+            Ganaa provides master-level plumbing services strictly for residential homes in {city} and the greater DMV area. Leak repairs, water heaters, and drain cleaning done right.
           </p>
           <button onClick={() => navigate('account')} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2">
             <Calendar className="w-5 h-5" /> Book a {city} Appointment
@@ -413,7 +466,7 @@ function CityView({ navigate, city }) {
   );
 }
 
-function ServicesView() {
+function ServicesView({ navigate }) {
   return (
     <div className="animate-in fade-in duration-500 py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="text-center max-w-3xl mx-auto mb-16">
@@ -437,8 +490,8 @@ function ServicesView() {
         <div className="relative z-10">
           <h3 className="text-2xl md:text-3xl font-bold mb-4">Have a unique plumbing issue?</h3>
           <p className="text-blue-100 mb-8 max-w-2xl mx-auto">If it involves pipes, water, or gas lines in a residential home, Ganaa has seen it and fixed it. Contact us for a custom assessment.</p>
-          <button className="bg-white text-blue-600 px-8 py-3 rounded-full font-bold shadow-lg hover:bg-blue-50 transition-colors">
-            Request an Estimate
+          <button onClick={() => navigate('contact')} className="bg-white text-blue-600 px-8 py-3 rounded-full font-bold shadow-lg hover:bg-blue-50 transition-colors">
+            Contact Us Now
           </button>
         </div>
         <Wrench className="absolute -left-10 -bottom-10 w-64 h-64 text-blue-500 opacity-30 rotate-45" />
@@ -460,14 +513,13 @@ function BlogView() {
           <article key={post.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
             <div className="h-48 bg-slate-200 relative overflow-hidden">
                {/* TODO: IMAGE/LOGO MARKER - BLOG POST IMAGE */}
-               {/* To add real images, insert: <img src="/blog-image-1.jpg" className="w-full h-full object-cover" /> */}
-               <div className="absolute inset-0 bg-gradient-to-tr from-slate-800 to-slate-600 opacity-90"></div>
+               <div className="absolute inset-0 bg-linear-to-tr from-slate-800 to-slate-600 opacity-90"></div>
                <FileText className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 text-white/50" />
             </div>
-            <div className="p-6 flex-grow flex flex-col">
+            <div className="p-6 grow flex flex-col">
               <span className="text-sm font-semibold text-blue-600 mb-2">{post.date}</span>
               <h3 className="text-xl font-bold text-slate-900 mb-3 line-clamp-2">{post.title}</h3>
-              <p className="text-slate-600 text-sm mb-6 flex-grow">{post.excerpt}</p>
+              <p className="text-slate-600 text-sm mb-6 grow">{post.excerpt}</p>
               <button className="text-slate-900 font-bold text-sm hover:text-blue-600 transition-colors flex items-center gap-1 w-max">
                 Read Article <span className="text-lg leading-none">&rarr;</span>
               </button>
@@ -479,7 +531,7 @@ function BlogView() {
   );
 }
 
-function ContactView() {
+function ContactView({ navigate }) {
   const [status, setStatus] = useState('');
 
   const handleSubmit = (e) => {
@@ -497,7 +549,7 @@ function ContactView() {
       <div className="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col lg:flex-row border border-slate-100">
         <div className="lg:w-1/3 bg-slate-900 text-white p-10 flex flex-col">
           <h2 className="text-3xl font-bold mb-8">Get in Touch</h2>
-          <div className="space-y-8 flex-grow">
+          <div className="space-y-8 grow">
             <div>
               <h4 className="text-blue-400 font-semibold mb-2 flex items-center gap-2"><Phone className="w-5 h-5"/> Phone</h4>
               <p className="text-lg">703-655-6351</p>
@@ -534,10 +586,12 @@ function ContactView() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">City in VA</label>
-              <select required className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+              <select required onChange={(e) => {
+                // Secret SEO feature: if they pick a city, offer to take them to that local page!
+                if(e.target.value) navigate(e.target.value.toLowerCase().replace(/\s+/g, '-'));
+              }} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                 <option value="">Select your city...</option>
                 {VA_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
-                <option value="other">Other</option>
               </select>
             </div>
             <div>
@@ -566,19 +620,31 @@ function AccountView({ user, db, appId }) {
   const handleGoogleLogin = async (e) => {
     e.preventDefault();
     if (!auth) {
-       // Fallback for preview environment if auth isn't initialized
        setIsSimulatedLogin(true);
        return;
     }
     
     try {
       const provider = new GoogleAuthProvider();
-      // In a real deployed app, this triggers the secure Google popup
-      await signInWithPopup(auth, provider); 
-      // The onAuthStateChanged listener in App component handles the rest
+      const result = await signInWithPopup(auth, provider); 
+      const loggedInUser = result.user;
+      
+      if (db) {
+        const userProfileRef = doc(db, 'artifacts', appId, 'users', loggedInUser.uid, 'profile', 'details');
+        const docSnap = await getDoc(userProfileRef);
+        
+        if (!docSnap.exists()) {
+          await setDoc(userProfileRef, {
+            name: loggedInUser.displayName || 'Valued Customer',
+            email: loggedInUser.email || '',
+            photoURL: loggedInUser.photoURL || '',
+            createdAt: serverTimestamp(),
+            marketingOptIn: true 
+          });
+        }
+      }
     } catch (error) {
       console.error("Google Sign-In Error:", error);
-      // Fallback for this preview canvas if the popup is blocked
       setIsSimulatedLogin(true); 
     }
   };
@@ -590,31 +656,23 @@ function AccountView({ user, db, appId }) {
     }
   };
 
-  // Fetch appointments (Rule 3 and Rule 1 applied)
   useEffect(() => {
-    if ((!user || user.isAnonymous) && !isSimulatedLogin) {
-      setLoading(false);
-      return;
-    }
+    if ((!user || user.isAnonymous) && !isSimulatedLogin) return;
+    if (!db) return;
 
-    if (!db) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    // Use the actual user.uid if available, otherwise fallback to a mock ID for simulation
     const currentUserId = (user && !user.isAnonymous) ? user.uid : 'simulated_user_123';
     const appointmentsRef = collection(db, 'artifacts', appId, 'users', currentUserId, 'appointments');
     const q = query(appointmentsRef, orderBy('createdAt', 'desc'));
 
     const unsubscribe = onSnapshot(q, 
       (snapshot) => {
+        setLoading(true);
         const apps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setAppointments(apps);
         setLoading(false);
       },
       (error) => {
+        setLoading(true);
         console.error("Error fetching appointments:", error);
         setLoading(false);
       }
@@ -623,25 +681,22 @@ function AccountView({ user, db, appId }) {
     return () => unsubscribe();
   }, [user, isSimulatedLogin, db, appId]);
 
-  // Render Login state if not logged in
   if (!isSimulatedLogin && (!user || user.isAnonymous)) {
     return (
       <div className="animate-in fade-in py-20 flex justify-center px-4">
-        <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl w-full max-w-md border border-slate-100">
-          <div className="text-center mb-8">
-            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <User className="w-8 h-8 text-blue-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900">Customer Portal</h2>
-            <p className="text-slate-500 mt-2 text-sm">Securely log in to view history and schedule service anytime.</p>
+        <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl w-full max-w-md border border-slate-100 text-center">
+          <div className="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <User className="w-10 h-10 text-blue-600" />
           </div>
+          <h2 className="text-3xl font-extrabold text-slate-900 mb-2">Customer Portal</h2>
+          <p className="text-slate-500 mb-8">Securely log in to view history and schedule service anytime.</p>
           
-          <div className="space-y-5">
+          <div className="space-y-6">
             <button 
               onClick={handleGoogleLogin} 
-              className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-3"
+              className="w-full bg-white border-2 border-slate-200 hover:border-blue-500 hover:bg-slate-50 text-slate-800 font-bold py-4 rounded-xl transition-all shadow-sm flex items-center justify-center gap-3"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -650,14 +705,9 @@ function AccountView({ user, db, appId }) {
               Continue with Google
             </button>
             
-            <div className="relative flex items-center py-2">
-              <div className="flex-grow border-t border-slate-200"></div>
-              <span className="flex-shrink-0 mx-4 text-slate-400 text-xs uppercase tracking-wider">Secure Access</span>
-              <div className="flex-grow border-t border-slate-200"></div>
-            </div>
-
-            <p className="text-xs text-center text-slate-500 leading-relaxed">
-              By logging in, you can easily track past services, schedule new appointments without re-entering your info, and communicate directly with Ganaa.
+            <p className="text-xs text-slate-500 bg-slate-50 p-4 rounded-lg">
+              <ShieldCheck className="w-4 h-4 inline mr-1 text-green-600" />
+              We securely use Google for authentication. We will never share your email.
             </p>
           </div>
         </div>
@@ -665,75 +715,109 @@ function AccountView({ user, db, appId }) {
     );
   }
 
-  // Dashboard Render
+  const isRealUser = user && !user.isAnonymous;
+  const userName = isRealUser && user.displayName ? user.displayName : "Valued Customer";
+  const firstName = userName.split(' ')[0];
+  const userPhoto = isRealUser && user.photoURL ? user.photoURL : null;
+  const userEmail = isRealUser && user.email ? user.email : "Not provided";
+
   return (
-    <div className="animate-in fade-in py-12 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="flex justify-between items-end mb-8 border-b border-slate-200 pb-6">
-        <div>
-          <h2 className="text-3xl font-bold text-slate-900">My Dashboard</h2>
-          <p className="text-slate-500 mt-1">Manage your home's plumbing service requests.</p>
+    <div className="animate-in fade-in py-12 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+        <div className="flex items-center gap-6">
+          {userPhoto ? (
+            <img src={userPhoto} alt={userName} className="w-20 h-20 rounded-full shadow-md border-4 border-white" />
+          ) : (
+            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center shadow-inner">
+              <User className="w-10 h-10 text-blue-600" />
+            </div>
+          )}
+          <div>
+            <h2 className="text-3xl font-bold text-slate-900">Welcome back, {firstName}!</h2>
+            <p className="text-slate-500 mt-1 flex items-center gap-2">
+              <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" /> DMVPipe Preferred Customer
+            </p>
+          </div>
         </div>
-        <button onClick={handleLogout} className="flex items-center gap-2 text-slate-500 hover:text-red-600 font-medium text-sm transition-colors">
+        <button onClick={handleLogout} className="mt-6 md:mt-0 flex items-center gap-2 text-slate-500 hover:text-red-600 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors">
           <LogOut className="w-4 h-4"/> Sign Out
         </button>
       </div>
 
       <div className="grid md:grid-cols-3 gap-8">
-        {/* Sidebar */}
-        <div className="md:col-span-1 space-y-4">
+        <div className="md:col-span-1 space-y-6">
           <button 
             onClick={() => setShowScheduleForm(true)}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-600/20 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 text-lg"
           >
-            <Calendar className="w-5 h-5" /> Book New Service
+            <Calendar className="w-6 h-6" /> Book Service Now
           </button>
           
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2"><Home className="w-4 h-4"/> Property Details</h4>
-            <div className="text-sm text-slate-600 space-y-2">
-              <p><span className="font-medium text-slate-800">Owner:</span> {user && !user.isAnonymous ? user.displayName || "Valued Customer" : "Valued Customer"}</p>
-              <p><span className="font-medium text-slate-800">Status:</span> Active Account</p>
-              <p className="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-400">Update details during your next booking.</p>
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2"><FileText className="w-5 h-5 text-blue-500"/> Your Profile</h4>
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Full Name</p>
+                <p className="text-slate-800 font-medium">{userName}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Email (For Confirmations)</p>
+                <p className="text-slate-800 font-medium truncate">{userEmail}</p>
+              </div>
             </div>
+            <p className="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-400 leading-relaxed">
+              We use this information to send appointment confirmations and occasional home maintenance tips.
+            </p>
           </div>
         </div>
 
-        {/* Main Area */}
         <div className="md:col-span-2">
           {showScheduleForm ? (
-            <div className="bg-white p-6 md:p-8 rounded-2xl border border-blue-100 shadow-lg relative animate-in slide-in-from-right-4">
-              <button onClick={() => setShowScheduleForm(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-800"><X className="w-5 h-5"/></button>
-              <h3 className="text-xl font-bold text-slate-900 mb-6">Schedule an Appointment</h3>
+            <div className="bg-white p-6 md:p-8 rounded-2xl border-2 border-blue-500 shadow-xl relative animate-in slide-in-from-right-4">
+              <button onClick={() => setShowScheduleForm(false)} className="absolute top-6 right-6 bg-slate-100 hover:bg-slate-200 p-2 rounded-full text-slate-600 transition-colors"><X className="w-5 h-5"/></button>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Schedule an Appointment</h3>
+              <p className="text-slate-500 mb-8">Tell us what you need. Ganaa will review it shortly.</p>
               <SchedulingForm 
-                db={db} user={user} appId={appId} 
+                db={db} user={user} appId={appId} userName={userName}
                 onSuccess={() => setShowScheduleForm(false)} 
               />
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-100 bg-slate-50">
-                <h3 className="font-bold text-slate-900 flex items-center gap-2"><Clock className="w-5 h-5 text-blue-500"/> Service History</h3>
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                <h3 className="font-bold text-xl text-slate-900 flex items-center gap-2"><Clock className="w-6 h-6 text-blue-500"/> Service History</h3>
+                <span className="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1 rounded-full">{appointments.length} Records</span>
               </div>
+              
               <div className="p-0">
                 {loading ? (
-                  <p className="p-8 text-center text-slate-500">Loading records...</p>
+                  <p className="p-12 text-center text-slate-500 animate-pulse">Loading your history...</p>
                 ) : appointments.length === 0 ? (
-                  <div className="p-12 text-center flex flex-col items-center">
-                    <FileText className="w-12 h-12 text-slate-300 mb-4" />
-                    <p className="text-slate-500 mb-4">No appointments found.</p>
-                    <button onClick={() => setShowScheduleForm(true)} className="text-blue-600 font-medium hover:underline">Book your first service</button>
+                  <div className="p-16 text-center flex flex-col items-center">
+                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                      <Wrench className="w-10 h-10 text-slate-300" />
+                    </div>
+                    <h4 className="text-lg font-bold text-slate-800 mb-2">No past appointments</h4>
+                    <p className="text-slate-500 mb-6 max-w-sm">When you schedule a service with Ganaa, it will appear here for your records.</p>
+                    <button onClick={() => setShowScheduleForm(true)} className="text-blue-600 font-bold hover:underline bg-blue-50 px-6 py-2 rounded-full">Book your first service</button>
                   </div>
                 ) : (
                   <ul className="divide-y divide-slate-100">
                     {appointments.map(app => (
-                      <li key={app.id} className="p-6 hover:bg-slate-50 transition-colors flex justify-between items-center">
+                      <li key={app.id} className="p-6 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                         <div>
-                          <p className="font-bold text-slate-900">{app.serviceType}</p>
-                          <p className="text-sm text-slate-500 mt-1">{new Date(app.date).toLocaleDateString()} at {app.time}</p>
-                          <p className="text-xs text-slate-400 mt-1 truncate max-w-xs">{app.address}</p>
+                          <p className="font-bold text-lg text-slate-900">{app.serviceType}</p>
+                          <div className="flex items-center gap-4 mt-2">
+                            <p className="text-sm font-medium text-blue-600 flex items-center gap-1"><Calendar className="w-4 h-4"/> {new Date(app.date).toLocaleDateString()}</p>
+                            <p className="text-sm text-slate-500 flex items-center gap-1"><Clock className="w-4 h-4"/> {app.time}</p>
+                          </div>
+                          <p className="text-sm text-slate-500 mt-2 flex items-center gap-1 truncate max-w-sm"><MapPin className="w-4 h-4"/> {app.address}</p>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${app.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
-                          {app.status ? app.status.toUpperCase() : 'PENDING'}
+                        <span className={`px-4 py-2 rounded-xl text-xs font-bold self-start sm:self-auto uppercase tracking-wider border
+                          ${app.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 
+                            app.status === 'urgent' ? 'bg-red-50 text-red-700 border-red-200' : 
+                            'bg-green-50 text-green-700 border-green-200'}`}>
+                          {app.status || 'PENDING'}
                         </span>
                       </li>
                     ))}
@@ -748,8 +832,7 @@ function AccountView({ user, db, appId }) {
   );
 }
 
-// Form used inside AccountView
-function SchedulingForm({ db, user, appId, onSuccess }) {
+function SchedulingForm({ db, user, appId, userName, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
   
   const handleSubmit = async (e) => {
@@ -764,23 +847,20 @@ function SchedulingForm({ db, user, appId, onSuccess }) {
       time: formData.get('time'),
       address: formData.get('address'),
       notes: formData.get('notes'),
+      customerName: userName,
       status: 'pending',
       createdAt: serverTimestamp()
     };
 
     try {
-      // Use real user uid or fallback for mock demo
       const currentUserId = (user && !user.isAnonymous) ? user.uid : 'simulated_user_123';
       const appointmentsRef = collection(db, 'artifacts', appId, 'users', currentUserId, 'appointments');
       await addDoc(appointmentsRef, data);
       
-      // Simulate Email sending delay
       setTimeout(() => {
         setSubmitting(false);
-        alert("Appointment requested! An auto-email confirmation has been sent.");
         onSuccess();
       }, 800);
-      
     } catch (err) {
       console.error(err);
       setSubmitting(false);
@@ -788,23 +868,23 @@ function SchedulingForm({ db, user, appId, onSuccess }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-       <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
+       <div className="grid grid-cols-2 gap-5">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
-          <input required name="date" type="date" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          <label className="block text-sm font-bold text-slate-700 mb-2">Date Needed</label>
+          <input required name="date" type="date" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Time Preference</label>
-          <select required name="time" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm">
+          <label className="block text-sm font-bold text-slate-700 mb-2">Time Preference</label>
+          <select required name="time" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
             <option value="Morning (8am-12pm)">Morning (8am-12pm)</option>
             <option value="Afternoon (12pm-4pm)">Afternoon (12pm-4pm)</option>
           </select>
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Service Needed</label>
-        <select required name="serviceType" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm">
+        <label className="block text-sm font-bold text-slate-700 mb-2">Service Needed</label>
+        <select required name="serviceType" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
           <option value="General Inspection">General Inspection</option>
           <option value="Leak Repair">Leak Repair</option>
           <option value="Water Heater">Water Heater Issue</option>
@@ -813,23 +893,20 @@ function SchedulingForm({ db, user, appId, onSuccess }) {
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
-        <input required name="address" type="text" placeholder="123 Main St, City, VA" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+        <label className="block text-sm font-bold text-slate-700 mb-2">Service Address</label>
+        <input required name="address" type="text" placeholder="123 Main St, City, VA" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Notes for Ganaa</label>
-        <textarea name="notes" rows="2" placeholder="Describe the issue..." className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm"></textarea>
+        <label className="block text-sm font-bold text-slate-700 mb-2">Notes for Ganaa</label>
+        <textarea name="notes" rows="3" placeholder="Please describe the issue in detail..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"></textarea>
       </div>
-      <button disabled={submitting} type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-2">
-        {submitting ? 'Processing...' : <><CheckCircle className="w-4 h-4"/> Confirm Booking</>}
+      <button disabled={submitting} type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-colors flex justify-center items-center gap-2 text-lg mt-4">
+        {submitting ? 'Processing Request...' : <><CheckCircle className="w-5 h-5"/> Confirm Booking</>}
       </button>
-      <p className="text-xs text-center text-slate-500 mt-2">You will receive an automated email confirmation once submitted.</p>
+      <p className="text-sm text-center text-slate-500 mt-2 font-medium">You will receive an automated email confirmation once submitted.</p>
     </form>
   );
 }
-
-
-// --- FLOATING WIDGET COMPONENTS ---
 
 function EmergencyForm({ db, user, appId, onClose }) {
   const [step, setStep] = useState(1);
@@ -854,7 +931,7 @@ function EmergencyForm({ db, user, appId, onClose }) {
       const appointmentsRef = collection(db, 'artifacts', appId, 'users', currentUserId, 'appointments');
       await addDoc(appointmentsRef, data);
       
-      setStep(2); // Show success message
+      setStep(2);
       setTimeout(() => {
         onClose();
         setStep(1);
@@ -928,7 +1005,6 @@ function ChatbotUI() {
     setMessages(prev => [...prev, { text: userMsg, isBot: false }]);
     setInput('');
 
-    // Simple rule-based mock responses
     setTimeout(() => {
       let botResponse = "I'm sorry, I'm just a simple bot. To get the best help, please use the 'Emergency Help' button or navigate to 'My Account' to schedule service.";
       const lowerInput = userMsg.toLowerCase();
@@ -949,7 +1025,7 @@ function ChatbotUI() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
-      <div className="flex-grow overflow-y-auto p-4 space-y-3">
+      <div className="grow overflow-y-auto p-4 space-y-3">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}>
             <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${msg.isBot ? 'bg-white border border-slate-200 text-slate-800 rounded-tl-none' : 'bg-blue-600 text-white rounded-tr-none'}`}>
@@ -966,7 +1042,7 @@ function ChatbotUI() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your question..." 
-            className="flex-grow bg-slate-100 border-none rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="grow bg-slate-100 border-none rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button type="submit" className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors">
             <Send className="w-4 h-4 ml-0.5" />

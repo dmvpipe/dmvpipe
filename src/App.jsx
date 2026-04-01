@@ -369,7 +369,8 @@ export default function App() {
               </div>
               <button onClick={() => setIsChatOpen(false)} className="hover:bg-slate-800 p-1 rounded transition-colors"><X className="w-5 h-5"/></button>
             </div>
-            <ChatbotUI />
+            {/* UPDATED: Passing user context into ChatbotUI */}
+            <ChatbotUI user={user} db={db} appId={appId} setIsChatOpen={setIsChatOpen} />
           </div>
         )}
 
@@ -1130,117 +1131,131 @@ function EmergencyForm({ db, user, appId, onClose }) {
   );
 }
 
-function ChatbotUI() {
-  const [messages, setMessages] = useState([
-    { text: "Hi! I'm the DMVPipe AI assistant. How can I help you with your plumbing needs?", isBot: true }
-  ]);
+
+// --- ENTIRELY NEW LOCAL FLOW CHATBOT ---
+function ChatbotUI({ user, db, appId, setIsChatOpen }) {
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [showLeadForm, setShowLeadForm] = useState(false);
-  const [leadInfo, setLeadInfo] = useState({ name: '', phone: '', email: '' });
   const [loading, setLoading] = useState(false);
+  const [chatState, setChatState] = useState('init');
+  const [formData, setFormData] = useState({ name: '', phone: '', issue: '', address: '', time: '', preference: '' });
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // Auto-scroll to the bottom of the chat
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading, chatState]);
 
-  const businessContext = `You are an AI assistant for DMVPipe, a family-owned residential plumbing company in Northern Virginia led by Ganaa with 15+ years of experience.
-
-Key Information:
-- Services: Leak detection & repair, water heater installation/repair, pipe repair & replacement, drain cleaning
-- Service Areas: 20 cities including Arlington, Alexandria, Fairfax, Falls Church, McLean, Vienna, Reston, Herndon, Annandale, Springfield, Burke, Centreville, Chantilly, Oakton, Tysons, Great Falls, Lorton, Sterling, Ashburn, Leesburg
-- Phone: 703-655-6351 (24/7 Emergency Available)
-- Email: info@dmvpipe.com
-- Website: Book at top right corner "Login / Book"
-- Specialization: 100% residential only - we don't take commercial jobs
-- Licensed & Insured
-- Transparent pricing with no hidden fees
-
-When responding:
-- Be friendly and professional
-- Keep responses concise but helpful
-- If it's a true emergency (active leak, burst pipe, no water, etc), recommend calling 703-655-6351 or using Emergency Help button
-- When appropriate, suggest scheduling through the portal or having Ganaa contact them
-- Always prioritize customer satisfaction and safety`;
-
-  const callGeminiAPI = async (userMessage, conversationHistory) => {
-    const apiKey = ""; // API key is populated at runtime by the execution environment
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-    const contents = conversationHistory
-      .filter((msg, index) => !(index === 0 && msg.isBot)) // Skip initial greeting
-      .map(msg => ({
-        role: msg.isBot ? "model" : "user",
-        parts: [{ text: msg.text }]
-      }));
-
-    contents.push({
-      role: "user",
-      parts: [{ text: userMessage }]
-    });
-
-    const payload = {
-      systemInstruction: { parts: [{ text: businessContext }] },
-      contents: contents
-    };
-
-    const delays = [1000, 2000, 4000, 8000, 16000];
-    let attempt = 0;
-
-    while (attempt < 6) {
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-        const result = await response.json();
-        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (text) return text;
-        throw new Error("No text in response");
-      } catch (error) {
-        if (attempt >= 5) {
-          return "I'm having trouble responding right now. Please call us at 703-655-6351 or try again later.";
-        }
-        await new Promise(res => setTimeout(res, delays[attempt]));
-        attempt++;
-      }
+  // Initial greeting based on login status
+  useEffect(() => {
+    const isRealUser = user && !user.isAnonymous;
+    if (isRealUser) {
+      const userName = user.displayName ? user.displayName.split(' ')[0] : 'there';
+      setMessages([{ text: `Hi ${userName}! I'm the local DMVPipe assistant. What seems to be the plumbing issue today?`, isBot: true }]);
+      setFormData(prev => ({ ...prev, name: user.displayName || 'Customer', phone: user.phoneNumber || '' }));
+      setChatState('ask_issue');
+    } else {
+      setMessages([{ text: "Hi! I'm the local DMVPipe assistant. To get started, what is your name?", isBot: true }]);
+      setChatState('ask_name');
     }
-  };
+  }, [user]);
 
-  const handleSend = async (e) => {
+  // Handle direct text submission
+  const handleSend = (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
+    processUserInput(input.trim());
+  };
 
-    const userMsg = input;
+  // Handle quick reply buttons
+  const handleQuickReply = (text) => {
+    if (loading) return;
+    processUserInput(text);
+  };
+
+  // State Machine Logic for processing inputs
+  const processUserInput = (userMsg) => {
     setMessages(prev => [...prev, { text: userMsg, isBot: false }]);
     setInput('');
     setLoading(true);
 
-    const botResponse = await callGeminiAPI(userMsg, messages);
-    
-    setMessages(prev => [...prev, { text: botResponse, isBot: true }]);
-    setLoading(false);
+    // Simulate thinking delay
+    setTimeout(() => {
+      let nextState = chatState;
+      let nextMsg = "";
+      let currentFormData = { ...formData };
+
+      switch (chatState) {
+        case 'ask_name':
+          currentFormData.name = userMsg;
+          nextMsg = `Nice to meet you, ${userMsg}! Could I get your phone number in case we get disconnected?`;
+          nextState = 'ask_phone';
+          break;
+        case 'ask_phone':
+          currentFormData.phone = userMsg;
+          nextMsg = `Thanks! What seems to be the plumbing issue you are experiencing today?`;
+          nextState = 'ask_issue';
+          break;
+        case 'ask_issue':
+          currentFormData.issue = userMsg;
+          nextMsg = `Got it. We can definitely help with that. Would you like to schedule an appointment for Ganaa to come take a look, or would you prefer a free counseling phone call first?`;
+          nextState = 'ask_preference';
+          break;
+        case 'ask_preference':
+          if (userMsg.toLowerCase().includes('call') || userMsg.toLowerCase().includes('counseling')) {
+            currentFormData.preference = 'call';
+            nextMsg = `Great. Ganaa will give you a call shortly at the number provided to discuss the issue. We've recorded your request!`;
+            nextState = 'finish';
+            saveLeadToDatabase(currentFormData);
+          } else {
+            currentFormData.preference = 'appointment';
+            nextMsg = `Perfect. What is the service address for the appointment?`;
+            nextState = 'ask_address';
+          }
+          break;
+        case 'ask_address':
+          currentFormData.address = userMsg;
+          nextMsg = `Thanks. When would be a good time for us to visit? (e.g., 'Tomorrow morning', 'Next Tuesday at 2pm')`;
+          nextState = 'ask_time';
+          break;
+        case 'ask_time':
+          currentFormData.time = userMsg;
+          nextMsg = `Fantastic! I have your request down for ${userMsg} at ${currentFormData.address}. Ganaa will review this and confirm with you shortly. Thanks for choosing DMVPipe!`;
+          nextState = 'finish';
+          saveLeadToDatabase(currentFormData);
+          break;
+        case 'finish':
+          nextMsg = `If you need anything else, feel free to close this chat or call us directly at 703-655-6351!`;
+          break;
+        default:
+          nextMsg = `I'm here to help. For emergencies, please call 703-655-6351.`;
+      }
+
+      setFormData(currentFormData);
+      setMessages(prev => [...prev, { text: nextMsg, isBot: true }]);
+      setChatState(nextState);
+      setLoading(false);
+    }, 800);
   };
 
-  const handleLeadCapture = async (e) => {
-    e.preventDefault();
-    if (!leadInfo.phone || !leadInfo.email) return;
-
-    setMessages(prev => [...prev, { 
-      text: `Thanks ${leadInfo.name || 'there'}! Ganaa will contact you soon at ${leadInfo.phone} or ${leadInfo.email}.`, 
-      isBot: true 
-    }]);
-    setShowLeadForm(false);
-    setLeadInfo({ name: '', phone: '', email: '' });
+  const saveLeadToDatabase = async (data) => {
+    if (!db) return;
+    try {
+      const currentUserId = (user && !user.isAnonymous) ? user.uid : 'simulated_user_123';
+      const appointmentsRef = collection(db, 'artifacts', appId, 'users', currentUserId, 'appointments');
+      await addDoc(appointmentsRef, {
+        serviceType: data.preference === 'call' ? 'Counseling Call (ChatBot)' : 'Service Appointment (ChatBot)',
+        date: data.time || 'TBD',
+        time: data.time || 'TBD',
+        address: data.address || 'Phone Call',
+        notes: `Issue: ${data.issue}. Contact Phone: ${data.phone}`,
+        customerName: data.name,
+        status: 'pending',
+        createdAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error("Error saving chatbot lead:", err);
+    }
   };
 
   return (
@@ -1248,7 +1263,7 @@ When responding:
       <div className="grow overflow-y-auto p-4 space-y-3">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}>
-            <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ${msg.isBot ? 'bg-white border border-slate-200 text-slate-800 rounded-tl-none' : 'bg-blue-600 text-white rounded-tr-none'}`}>
+            <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ${msg.isBot ? 'bg-white border border-slate-200 text-slate-800 rounded-tl-none shadow-sm' : 'bg-blue-600 text-white rounded-tr-none shadow-sm'}`}>
               {msg.text}
             </div>
           </div>
@@ -1256,8 +1271,8 @@ When responding:
         
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-none px-4 py-2">
-              <div className="flex gap-1">
+            <div className="bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
+              <div className="flex gap-1.5">
                 <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
                 <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                 <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
@@ -1265,64 +1280,43 @@ When responding:
             </div>
           </div>
         )}
-
-        {showLeadForm && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-            <p className="text-xs font-semibold text-slate-700">Contact Information</p>
-            <input 
-              type="text" 
-              placeholder="Name (optional)" 
-              value={leadInfo.name}
-              onChange={(e) => setLeadInfo({...leadInfo, name: e.target.value})}
-              className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-            <input 
-              type="email" 
-              placeholder="Email *" 
-              required
-              value={leadInfo.email}
-              onChange={(e) => setLeadInfo({...leadInfo, email: e.target.value})}
-              className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-            <input 
-              type="tel" 
-              placeholder="Phone *" 
-              required
-              value={leadInfo.phone}
-              onChange={(e) => setLeadInfo({...leadInfo, phone: e.target.value})}
-              className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-            <button 
-              onClick={handleLeadCapture}
-              className="w-full bg-blue-600 text-white text-xs py-1.5 rounded font-medium hover:bg-blue-700 transition-colors"
-            >
-              Send My Info
-            </button>
-          </div>
-        )}
-        
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-3 bg-white border-t border-slate-200 space-y-2">
-        {messages.length > 4 && !showLeadForm && (
+      {/* Quick Reply Buttons for specific state */}
+      {chatState === 'ask_preference' && !loading && (
+        <div className="px-3 pb-2 flex gap-2 overflow-x-auto">
           <button 
-            onClick={() => setShowLeadForm(true)}
-            className="w-full text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1.5 rounded hover:bg-green-100 transition-colors"
+            onClick={() => handleQuickReply('Schedule Appointment')} 
+            className="whitespace-nowrap bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border border-blue-200 shadow-sm"
           >
-            💬 Have Ganaa Contact Me
+            📅 Schedule Appointment
           </button>
-        )}
+          <button 
+            onClick={() => handleQuickReply('Free Counseling Call')} 
+            className="whitespace-nowrap bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border border-blue-200 shadow-sm"
+          >
+            📞 Free Counseling Call
+          </button>
+        </div>
+      )}
+
+      {/* Input Area */}
+      <div className="p-3 bg-white border-t border-slate-200">
         <form onSubmit={handleSend} className="flex gap-2">
           <input 
             type="text" 
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your question..." 
-            disabled={loading}
-            className="grow bg-slate-100 border-none rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            placeholder={chatState === 'finish' ? "Chat finished." : "Type your answer..."} 
+            disabled={loading || chatState === 'finish'}
+            className="grow bg-slate-100 border border-slate-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-all"
           />
-          <button type="submit" disabled={loading} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50">
+          <button 
+            type="submit" 
+            disabled={loading || !input.trim() || chatState === 'finish'} 
+            className="bg-blue-600 text-white p-2.5 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50 shadow-md flex items-center justify-center"
+          >
             <Send className="w-4 h-4 ml-0.5" />
           </button>
         </form>

@@ -458,7 +458,7 @@ function CityView({ navigate, city }) {
       <section className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
          <h2 className="text-3xl font-bold text-slate-900 mb-6">Why {city} Homeowners Trust DMVPipe</h2>
          <p className="text-lg text-slate-600 max-w-3xl mx-auto">
-           When you need a reliable plumber in {city}, Virginia, you shouldn't have to deal with giant corporate dispatch centers. Ganaa brings 15+ years of direct, hands-on master plumbing experience right to your front door.
+           When you need a reliable plumber in {city}, Virginia, you shouldn't have to deal with giant corporate dispatch centers. Ganaa brings 15+ years of direct, hands-on master plumbing experience right to your front door. Need emergency water heater repair in Arlington, VA? Ganaa provides same-day residential leak detection and drain cleaning. 
          </p>
          <button onClick={() => navigate('services')} className="mt-8 text-blue-600 font-bold hover:underline">View All Residential Services &rarr;</button>
       </section>

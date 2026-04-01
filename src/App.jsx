@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { 
   Wrench, Home, Calendar, Phone, FileText, MessageSquare, 
   AlertTriangle, CheckCircle, X, User, Clock, ShieldCheck, 
@@ -1143,12 +1144,22 @@ function EmergencyForm({ db, user, appId, onClose }) {
 
 function ChatbotUI() {
   const [messages, setMessages] = useState([
-    { text: "Hi! I'm the DMVPipe assistant. How can I help you today?", isBot: true }
+    { text: "Hi! I'm the DMVPipe AI assistant powered by Google Gemini. How can I help you with your plumbing needs?", isBot: true }
   ]);
   const [input, setInput] = useState('');
   const [showLeadForm, setShowLeadForm] = useState(false);
   const [leadInfo, setLeadInfo] = useState({ name: '', phone: '', email: '' });
+  const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
+  const genAIRef = useRef(null);
+
+  // Initialize Gemini AI
+  useEffect(() => {
+    const apiKey = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY;
+    if (apiKey) {
+      genAIRef.current = new GoogleGenerativeAI(apiKey);
+    }
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1158,118 +1169,64 @@ function ChatbotUI() {
     scrollToBottom();
   }, [messages]);
 
-  const quickReplies = [
-    "Schedule Service",
-    "Service Areas",
-    "Emergency Help",
-    "Pricing Info"
-  ];
+  const businessContext = `You are an AI assistant for DMVPipe, a family-owned residential plumbing company in Northern Virginia led by Ganaa with 15+ years of experience.
 
-  const generateBotResponse = (userMsg) => {
-    const lower = userMsg.toLowerCase().trim();
-    
-    // Greeting patterns
-    if (/^(hi|hello|hey|greetings)/.test(lower)) {
-      return "Hello! How can I help you with your plumbing needs today? 😊";
+Key Information:
+- Services: Leak detection & repair, water heater installation/repair, pipe repair & replacement, drain cleaning
+- Service Areas: 20 cities including Arlington, Alexandria, Fairfax, Falls Church, McLean, Vienna, Reston, Herndon, Annandale, Springfield, Burke, Centreville, Chantilly, Oakton, Tysons, Great Falls, Lorton, Sterling, Ashburn, Leesburg
+- Phone: 703-655-6351 (24/7 Emergency Available)
+- Email: info@dmvpipe.com
+- Website: Book at top right corner "Login / Book"
+- Specialization: 100% residential only - we don't take commercial jobs
+- Licensed & Insured
+- Transparent pricing with no hidden fees
+
+When responding:
+- Be friendly and professional
+- Keep responses concise but helpful
+- If it's a true emergency (active leak, burst pipe, no water, etc), recommend calling 703-655-6351 or using Emergency Help button
+- When appropriate, suggest scheduling through the portal or having Ganaa contact them
+- Always prioritize customer satisfaction and safety`;
+
+  const callGeminiAPI = async (userMessage, conversationHistory) => {
+    try {
+      if (!genAIRef.current) {
+        return "I'm having trouble connecting to the AI service. Please call us at 703-655-6351 or try again in a moment.";
+      }
+
+      const model = genAIRef.current.getGenerativeModel({ model: "gemini-1.5-flash" });
+      
+      const chat = model.startChat({
+        history: conversationHistory.map(msg => ({
+          role: msg.isBot ? "model" : "user",
+          parts: [{ text: msg.text }]
+        })),
+        systemInstruction: businessContext
+      });
+
+      const result = await chat.sendMessage(userMessage);
+      const response = result.response.text();
+      
+      return response;
+    } catch (error) {
+      console.error("Gemini API Error:", error);
+      return "I'm having trouble responding right now. Please call us at 703-655-6351 or try again later.";
     }
-
-    // Schedule/Booking patterns
-    if (/(schedule|book|appointment|reserve|when can|availability)/.test(lower)) {
-      return "I'd love to help you schedule! You can book directly through our Customer Portal. Click 'Login / Book' at the top right, or I can collect your info and have Ganaa contact you. What works best?";
-    }
-
-    // Service area patterns
-    if (/(service.*area|where.*serve|cities|coverage|do you serve)/.test(lower)) {
-      return "We serve 20 cities in Northern Virginia including: Arlington, Alexandria, Fairfax, Falls Church, McLean, Vienna, Reston, Herndon, and more! Are you in one of these areas?";
-    }
-
-    // Emergency patterns
-    if (/(emergency|urgent|leak|burst|water|help.*now|immediately)/.test(lower)) {
-      return "⚠️ For emergencies, please click the 'Emergency Help' button or call us directly at 703-655-6351. We're available 24/7!";
-    }
-
-    // Commercial patterns
-    if (/(commercial|business|office|warehouse|restaurant)/.test(lower)) {
-      return "We specialize exclusively in residential plumbing to ensure the best service for homeowners. We don't take commercial jobs.";
-    }
-
-    // Service-specific patterns
-    if (/(water heater|heater repair|hot water)/.test(lower)) {
-      return "Water heater acting up? We handle both tank and tankless installations, repairs, and replacements. What's happening with yours?";
-    }
-
-    if (/(leak|leaking|drip|water damage)/.test(lower)) {
-      return "Leaks are no joke! We specialize in fast leak detection and repair. Is this an active leak? You might want to use our Emergency button.";
-    }
-
-    if (/(drain|clog|backed up|slow drain)/.test(lower)) {
-      return "Drain issues? We offer professional drain cleaning and can handle everything from sink clogs to main line blockages.";
-    }
-
-    if (/(pipe|repipe|repiping|burst|broken)/.test(lower)) {
-      return "Need pipe repair or replacement? Whether it's localized repairs or full re-piping for older homes, we've got you covered.";
-    }
-
-    // Cost/Pricing patterns
-    if (/(cost|price|how much|pricing|expensive|charge|rate)/.test(lower)) {
-      return "Pricing varies by service and complexity. We provide transparent quotes with no hidden fees before any work begins. Would you like to describe your issue?";
-    }
-
-    // Experience/Trust patterns
-    if (/(experience|trusted|licensed|insured|credentials|who are you)/.test(lower)) {
-      return "Ganaa has 15+ years of master plumbing experience. We're licensed, insured, and family-owned. We focus on residential only to provide exceptional service.";
-    }
-
-    // Contact patterns
-    if (/(contact|phone|number|call|reach|email|address)/.test(lower)) {
-      return "📞 Call: 703-655-6351\n📧 Email: info@dmvpipe.com\n24/7 Emergency Available";
-    }
-
-    // Yes patterns
-    if (/^(yes|yeah|yep|sure|ok|okay)/.test(lower)) {
-      return "Great! What specific plumbing issue can I help you with?";
-    }
-
-    // No patterns
-    if (/^(no|nope|not interested)/.test(lower)) {
-      return "No problem! Feel free to reach out anytime. Have a great day! 👋";
-    }
-
-    // Default response with offer to collect info
-    return "That's a great question! To give you the best help, could you tell me a bit more about your plumbing issue? Or if you'd like, I can have Ganaa contact you directly. What would help?";
   };
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
 
     const userMsg = input;
     setMessages(prev => [...prev, { text: userMsg, isBot: false }]);
     setInput('');
+    setLoading(true);
 
-    setTimeout(() => {
-      const botResponse = generateBotResponse(userMsg);
-      setMessages(prev => [...prev, { text: botResponse, isBot: true }]);
-    }, 600);
-  };
-
-  const handleQuickReply = (reply) => {
-    setMessages(prev => [...prev, { text: reply, isBot: false }]);
+    const botResponse = await callGeminiAPI(userMsg, messages);
     
-    let response = "";
-    if (reply === "Schedule Service") {
-      response = "Perfect! You can book directly at the top right, or I can take your details and Ganaa will contact you. What's your preference?";
-    } else if (reply === "Service Areas") {
-      response = "We serve 20 cities in Northern Virginia! Including Arlington, Alexandria, Fairfax, Reston, Herndon, and more. Are you in our service area?";
-    } else if (reply === "Emergency Help") {
-      response = "Click the red 'Emergency Help' button or call 703-655-6351. Available 24/7!";
-    } else if (reply === "Pricing Info") {
-      response = "Pricing depends on the service. We provide transparent quotes with no hidden fees. What's your plumbing issue?";
-    }
-
-    setTimeout(() => {
-      setMessages(prev => [...prev, { text: response, isBot: true }]);
-    }, 400);
+    setMessages(prev => [...prev, { text: botResponse, isBot: true }]);
+    setLoading(false);
   };
 
   const handleLeadCapture = async (e) => {
@@ -1282,9 +1239,6 @@ function ChatbotUI() {
     }]);
     setShowLeadForm(false);
     setLeadInfo({ name: '', phone: '', email: '' });
-    
-    // Here you could send to Firebase or your backend
-    console.log('Lead captured:', leadInfo);
   };
 
   return (
@@ -1298,18 +1252,15 @@ function ChatbotUI() {
           </div>
         ))}
         
-        {messages.length === 1 && (
-          <div className="flex flex-col gap-2 mt-4">
-            <p className="text-xs text-slate-600 text-center">Quick replies:</p>
-            {quickReplies.map((reply, i) => (
-              <button
-                key={i}
-                onClick={() => handleQuickReply(reply)}
-                className="text-left text-xs bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors"
-              >
-                {reply}
-              </button>
-            ))}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-none px-4 py-2">
+              <div className="flex gap-1">
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1352,7 +1303,7 @@ function ChatbotUI() {
       </div>
 
       <div className="p-3 bg-white border-t border-slate-200 space-y-2">
-        {messages.length > 3 && !showLeadForm && (
+        {messages.length > 4 && !showLeadForm && (
           <button 
             onClick={() => setShowLeadForm(true)}
             className="w-full text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1.5 rounded hover:bg-green-100 transition-colors"
@@ -1366,9 +1317,10 @@ function ChatbotUI() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your question..." 
-            className="grow bg-slate-100 border-none rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={loading}
+            className="grow bg-slate-100 border-none rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           />
-          <button type="submit" className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors">
+          <button type="submit" disabled={loading} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50">
             <Send className="w-4 h-4 ml-0.5" />
           </button>
         </form>

@@ -1143,9 +1143,11 @@ function EmergencyForm({ db, user, appId, onClose }) {
 
 function ChatbotUI() {
   const [messages, setMessages] = useState([
-    { text: "Hi! I'm the DMVPipe virtual assistant. I can help you with scheduling or answer basic questions about Ganaa's services.", isBot: true }
+    { text: "Hi! I'm the DMVPipe assistant. How can I help you today?", isBot: true }
   ]);
   const [input, setInput] = useState('');
+  const [showLeadForm, setShowLeadForm] = useState(false);
+  const [leadInfo, setLeadInfo] = useState({ name: '', phone: '', email: '' });
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -1156,6 +1158,87 @@ function ChatbotUI() {
     scrollToBottom();
   }, [messages]);
 
+  const quickReplies = [
+    "Schedule Service",
+    "Service Areas",
+    "Emergency Help",
+    "Pricing Info"
+  ];
+
+  const generateBotResponse = (userMsg) => {
+    const lower = userMsg.toLowerCase().trim();
+    
+    // Greeting patterns
+    if (/^(hi|hello|hey|greetings)/.test(lower)) {
+      return "Hello! How can I help you with your plumbing needs today? 😊";
+    }
+
+    // Schedule/Booking patterns
+    if (/(schedule|book|appointment|reserve|when can|availability)/.test(lower)) {
+      return "I'd love to help you schedule! You can book directly through our Customer Portal. Click 'Login / Book' at the top right, or I can collect your info and have Ganaa contact you. What works best?";
+    }
+
+    // Service area patterns
+    if (/(service.*area|where.*serve|cities|coverage|do you serve)/.test(lower)) {
+      return "We serve 20 cities in Northern Virginia including: Arlington, Alexandria, Fairfax, Falls Church, McLean, Vienna, Reston, Herndon, and more! Are you in one of these areas?";
+    }
+
+    // Emergency patterns
+    if (/(emergency|urgent|leak|burst|water|help.*now|immediately)/.test(lower)) {
+      return "⚠️ For emergencies, please click the 'Emergency Help' button or call us directly at 703-655-6351. We're available 24/7!";
+    }
+
+    // Commercial patterns
+    if (/(commercial|business|office|warehouse|restaurant)/.test(lower)) {
+      return "We specialize exclusively in residential plumbing to ensure the best service for homeowners. We don't take commercial jobs.";
+    }
+
+    // Service-specific patterns
+    if (/(water heater|heater repair|hot water)/.test(lower)) {
+      return "Water heater acting up? We handle both tank and tankless installations, repairs, and replacements. What's happening with yours?";
+    }
+
+    if (/(leak|leaking|drip|water damage)/.test(lower)) {
+      return "Leaks are no joke! We specialize in fast leak detection and repair. Is this an active leak? You might want to use our Emergency button.";
+    }
+
+    if (/(drain|clog|backed up|slow drain)/.test(lower)) {
+      return "Drain issues? We offer professional drain cleaning and can handle everything from sink clogs to main line blockages.";
+    }
+
+    if (/(pipe|repipe|repiping|burst|broken)/.test(lower)) {
+      return "Need pipe repair or replacement? Whether it's localized repairs or full re-piping for older homes, we've got you covered.";
+    }
+
+    // Cost/Pricing patterns
+    if (/(cost|price|how much|pricing|expensive|charge|rate)/.test(lower)) {
+      return "Pricing varies by service and complexity. We provide transparent quotes with no hidden fees before any work begins. Would you like to describe your issue?";
+    }
+
+    // Experience/Trust patterns
+    if (/(experience|trusted|licensed|insured|credentials|who are you)/.test(lower)) {
+      return "Ganaa has 15+ years of master plumbing experience. We're licensed, insured, and family-owned. We focus on residential only to provide exceptional service.";
+    }
+
+    // Contact patterns
+    if (/(contact|phone|number|call|reach|email|address)/.test(lower)) {
+      return "📞 Call: 703-655-6351\n📧 Email: info@dmvpipe.com\n24/7 Emergency Available";
+    }
+
+    // Yes patterns
+    if (/^(yes|yeah|yep|sure|ok|okay)/.test(lower)) {
+      return "Great! What specific plumbing issue can I help you with?";
+    }
+
+    // No patterns
+    if (/^(no|nope|not interested)/.test(lower)) {
+      return "No problem! Feel free to reach out anytime. Have a great day! 👋";
+    }
+
+    // Default response with offer to collect info
+    return "That's a great question! To give you the best help, could you tell me a bit more about your plumbing issue? Or if you'd like, I can have Ganaa contact you directly. What would help?";
+  };
+
   const handleSend = (e) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -1165,21 +1248,43 @@ function ChatbotUI() {
     setInput('');
 
     setTimeout(() => {
-      let botResponse = "I'm sorry, I'm just a simple bot. To get the best help, please use the 'Emergency Help' button or navigate to 'My Account' to schedule service.";
-      const lowerInput = userMsg.toLowerCase();
-      
-      if (lowerInput.includes("schedule") || lowerInput.includes("book") || lowerInput.includes("appointment")) {
-        botResponse = "You can easily schedule service by creating an account and logging into the Customer Portal! Look for the 'Login / Book' button at the top.";
-      } else if (lowerInput.includes("commercial")) {
-        botResponse = "Ganaa specializes strictly in residential plumbing. We do not take commercial jobs to ensure we provide the best service to homeowners.";
-      } else if (lowerInput.includes("area") || lowerInput.includes("where") || lowerInput.includes("cities")) {
-        botResponse = "We cover 20 cities/counties in Northern Virginia closest to D.C., including Arlington, Alexandria, Fairfax, and Reston.";
-      } else if (lowerInput.includes("hello") || lowerInput.includes("hi")) {
-        botResponse = "Hello! How can I assist you with your plumbing needs today?";
-      }
-
+      const botResponse = generateBotResponse(userMsg);
       setMessages(prev => [...prev, { text: botResponse, isBot: true }]);
-    }, 800);
+    }, 600);
+  };
+
+  const handleQuickReply = (reply) => {
+    setMessages(prev => [...prev, { text: reply, isBot: false }]);
+    
+    let response = "";
+    if (reply === "Schedule Service") {
+      response = "Perfect! You can book directly at the top right, or I can take your details and Ganaa will contact you. What's your preference?";
+    } else if (reply === "Service Areas") {
+      response = "We serve 20 cities in Northern Virginia! Including Arlington, Alexandria, Fairfax, Reston, Herndon, and more. Are you in our service area?";
+    } else if (reply === "Emergency Help") {
+      response = "Click the red 'Emergency Help' button or call 703-655-6351. Available 24/7!";
+    } else if (reply === "Pricing Info") {
+      response = "Pricing depends on the service. We provide transparent quotes with no hidden fees. What's your plumbing issue?";
+    }
+
+    setTimeout(() => {
+      setMessages(prev => [...prev, { text: response, isBot: true }]);
+    }, 400);
+  };
+
+  const handleLeadCapture = async (e) => {
+    e.preventDefault();
+    if (!leadInfo.phone || !leadInfo.email) return;
+
+    setMessages(prev => [...prev, { 
+      text: `Thanks ${leadInfo.name || 'there'}! Ganaa will contact you soon at ${leadInfo.phone} or ${leadInfo.email}.`, 
+      isBot: true 
+    }]);
+    setShowLeadForm(false);
+    setLeadInfo({ name: '', phone: '', email: '' });
+    
+    // Here you could send to Firebase or your backend
+    console.log('Lead captured:', leadInfo);
   };
 
   return (
@@ -1187,14 +1292,74 @@ function ChatbotUI() {
       <div className="grow overflow-y-auto p-4 space-y-3">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}>
-            <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${msg.isBot ? 'bg-white border border-slate-200 text-slate-800 rounded-tl-none' : 'bg-blue-600 text-white rounded-tr-none'}`}>
+            <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ${msg.isBot ? 'bg-white border border-slate-200 text-slate-800 rounded-tl-none' : 'bg-blue-600 text-white rounded-tr-none'}`}>
               {msg.text}
             </div>
           </div>
         ))}
+        
+        {messages.length === 1 && (
+          <div className="flex flex-col gap-2 mt-4">
+            <p className="text-xs text-slate-600 text-center">Quick replies:</p>
+            {quickReplies.map((reply, i) => (
+              <button
+                key={i}
+                onClick={() => handleQuickReply(reply)}
+                className="text-left text-xs bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                {reply}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {showLeadForm && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+            <p className="text-xs font-semibold text-slate-700">Contact Information</p>
+            <input 
+              type="text" 
+              placeholder="Name (optional)" 
+              value={leadInfo.name}
+              onChange={(e) => setLeadInfo({...leadInfo, name: e.target.value})}
+              className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <input 
+              type="email" 
+              placeholder="Email *" 
+              required
+              value={leadInfo.email}
+              onChange={(e) => setLeadInfo({...leadInfo, email: e.target.value})}
+              className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <input 
+              type="tel" 
+              placeholder="Phone *" 
+              required
+              value={leadInfo.phone}
+              onChange={(e) => setLeadInfo({...leadInfo, phone: e.target.value})}
+              className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <button 
+              onClick={handleLeadCapture}
+              className="w-full bg-blue-600 text-white text-xs py-1.5 rounded font-medium hover:bg-blue-700 transition-colors"
+            >
+              Send My Info
+            </button>
+          </div>
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
-      <div className="p-3 bg-white border-t border-slate-200">
+
+      <div className="p-3 bg-white border-t border-slate-200 space-y-2">
+        {messages.length > 3 && !showLeadForm && (
+          <button 
+            onClick={() => setShowLeadForm(true)}
+            className="w-full text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1.5 rounded hover:bg-green-100 transition-colors"
+          >
+            💬 Have Ganaa Contact Me
+          </button>
+        )}
         <form onSubmit={handleSend} className="flex gap-2">
           <input 
             type="text" 

@@ -209,7 +209,12 @@ export default function App() {
           await signInAnonymously(auth);
         }
       } catch (error) {
-        console.error("Auth error:", error);
+        // Ignore admin-restricted anonymous sign-in errors in local/dev environment.
+        if (error && error.code === 'auth/admin-restricted-operation') {
+          console.warn("Auth warning (non-fatal):", error.message || error);
+        } else {
+          console.error("Auth error:", error);
+        }
       }
     };
     initAuth();
@@ -1156,8 +1161,17 @@ function ChatbotUI() {
   // Initialize Gemini AI
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY;
+    console.log('API Key exists:', !!apiKey);
+    console.log('API Key length:', apiKey?.length);
     if (apiKey) {
-      genAIRef.current = new GoogleGenerativeAI(apiKey);
+      try {
+        genAIRef.current = new GoogleGenerativeAI(apiKey);
+        console.log('Gemini AI initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize Gemini:', error);
+      }
+    } else {
+      console.error('VITE_GOOGLE_GEMINI_API_KEY is not set');
     }
   }, []);
 
@@ -1190,26 +1204,42 @@ When responding:
 
   const callGeminiAPI = async (userMessage, conversationHistory) => {
     try {
+      console.log('callGeminiAPI called with message:', userMessage);
+      console.log('genAIRef.current exists:', !!genAIRef.current);
+      
       if (!genAIRef.current) {
+        console.error('genAIRef.current is not initialized');
         return "I'm having trouble connecting to the AI service. Please call us at 703-655-6351 or try again in a moment.";
       }
 
       const model = genAIRef.current.getGenerativeModel({ model: "gemini-1.5-flash" });
+      console.log('Model created successfully');
       
-      const chat = model.startChat({
-        history: conversationHistory.map(msg => ({
-          role: msg.isBot ? "model" : "user",
-          parts: [{ text: msg.text }]
-        })),
-        systemInstruction: businessContext
+      // Filter out the initial bot message - only include actual conversation
+      // Must start with a user message for Gemini chat history
+      const validHistory = conversationHistory.filter((msg, index) => {
+        // Skip the first bot message (index 0)
+        if (index === 0 && msg.isBot) return false;
+        return true;
       });
 
-      const result = await chat.sendMessage(userMessage);
-      const response = result.response.text();
+      console.log('Filtered history length:', validHistory.length);
       
+      const result = await model.generateContent({
+        contents: [
+          { role: "user", parts: [{ text: businessContext }] },
+          { role: "user", parts: [{ text: userMessage }] }
+        ]
+      });
+
+      const response = result.response.text();
+      console.log('Gemini response received:', response);
+
       return response;
     } catch (error) {
-      console.error("Gemini API Error:", error);
+      console.error('Gemini API Error:', error);
+      console.error('Error message:', error.message);
+      console.error('Error details:', error);
       return "I'm having trouble responding right now. Please call us at 703-655-6351 or try again later.";
     }
   };

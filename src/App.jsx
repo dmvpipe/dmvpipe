@@ -229,7 +229,7 @@ export default function App() {
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
             <div className="flex items-center cursor-pointer gap-2 sm:gap-3" onClick={() => navigate('home')}>
-              <img src="/logo.png" alt="DMVPipe" className="h-10 w-10 sm:h-12 sm:w-12 object-contain mr-2 sm:mr-3 rounded-lg shadow-md bg-white p-1" />
+              <img src="/logo.png" alt="DMVPipe" className="h-10 w-10 sm:h-12 sm:w-12 object-contain mr-2 sm:mr-3" />
               <div>
                 <h1 className="text-lg sm:text-2xl font-bold text-slate-900 leading-none tracking-tight">DMVPipe</h1>
                 <p className="text-[10px] sm:text-xs text-blue-600 font-semibold tracking-wider uppercase mt-1">Ganaa's Plumbing</p>
@@ -298,7 +298,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center mb-4">
-              <img src="/logo.png" alt="DMVPipe" className="h-8 w-8 object-contain mr-2 rounded bg-white p-1" />
+              <img src="/logo.png" alt="DMVPipe" className="h-8 w-8 object-contain mr-2" />
               <h2 className="text-lg sm:text-xl font-bold text-white">DMVPipe</h2>
             </div>
             <p className="text-xs sm:text-sm mb-4">Ganaa's Family Owned Plumbing. Serving the DMV area with 15+ years of trusted residential experience.</p>
@@ -442,7 +442,7 @@ function HomeView({ navigate }) {
           <span className="bg-blue-600/20 text-blue-400 px-4 py-1.5 rounded-full text-sm font-semibold mb-6 border border-blue-500/30">
             Family Owned & Operated
           </span>
-          <img src="/logo.png" alt="DMVPipe Logo" className="h-16 w-16 sm:h-20 sm:w-20 object-contain mb-6 rounded-lg shadow-lg bg-white p-2" />
+          <img src="/logo.png" alt="DMVPipe Logo" className="h-16 w-16 sm:h-20 sm:w-20 object-contain mb-6" />
           <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 max-w-4xl">
             Honest Residential Plumbing for the <span className="text-blue-500">DMV Area</span>
           </h1>

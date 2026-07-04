@@ -954,6 +954,25 @@ function CityView({ navigate, city }) {
   );
 }
 
+// Shows a real photo if /public/products/photos/<id>.jpg exists,
+// otherwise falls back to the illustration. To add real photos: drop files
+// named by product id (e.g. wh-gas-40.jpg) into public/products/photos/.
+function ProductImage({ p }) {
+  const [src, setSrc] = useState(`/products/photos/${p.id}.jpg`);
+  if (!src) {
+    return <div className="w-full h-full flex items-center justify-center text-blue-200">{CATEGORY_ICONS[p.cat] || <Wrench className="w-8 h-8" />}</div>;
+  }
+  return (
+    <img
+      src={src}
+      alt={p.name}
+      className="w-full h-full object-contain p-2"
+      loading="lazy"
+      onError={() => setSrc(src === p.img ? null : p.img)}
+    />
+  );
+}
+
 function ShopView({ navigate, cart, updateCart }) {
   const [search, setSearch] = useState('');
   const q = search.trim().toLowerCase();
@@ -1007,12 +1026,8 @@ function ShopView({ navigate, cart, updateCart }) {
               <div className="grid sm:grid-cols-2 gap-4">
                 {visible.filter(p => p.cat === cat).map(p => (
                   <div key={p.id} className="bg-white rounded-2xl border border-stone-100 shadow-sm p-4 flex flex-col">
-                    <div className="h-28 rounded-xl mb-4 overflow-hidden bg-gradient-to-br from-blue-50 to-stone-100 flex items-center justify-center text-blue-200">
-                      {p.img ? (
-                        <img src={p.img} alt={p.name} className="w-full h-full object-contain p-2" loading="lazy" />
-                      ) : (
-                        CATEGORY_ICONS[p.cat] || <Wrench className="w-8 h-8" />
-                      )}
+                    <div className="h-28 rounded-xl mb-4 overflow-hidden bg-gradient-to-br from-blue-50 to-stone-100">
+                      <ProductImage p={p} />
                     </div>
                     <h3 className="font-bold text-stone-900 text-sm leading-snug grow">{p.name}</h3>
                     <div className="flex items-center justify-between mt-4">

@@ -3,148 +3,174 @@
   <!-- Core Pages -->
   <url>
     <loc>https://dmvpipe.com/</loc>
-    <lastmod>2024-04-01</lastmod>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://dmvpipe.com/services</loc>
-    <lastmod>2024-04-01</lastmod>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://dmvpipe.com/contact</loc>
-    <lastmod>2024-04-01</lastmod>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://dmvpipe.com/blog</loc>
-    <lastmod>2024-04-01</lastmod>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
+  <url>
+    <loc>https://dmvpipe.com/shop</loc>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
 
-  <!-- 20 City Landing Pages for SEO -->
+  <!-- Blog Posts -->
   <url>
-    <loc>https://dmvpipe.com/city-arlington</loc>
-    <lastmod>2024-04-01</lastmod>
-    <changefreq>monthly</changefreq>
+    <loc>https://dmvpipe.com/post-prevent-frozen-pipes-virginia</loc>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>yearly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-alexandria</loc>
-    <lastmod>2024-04-01</lastmod>
-    <changefreq>monthly</changefreq>
+    <loc>https://dmvpipe.com/post-signs-water-heater-failing</loc>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>yearly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-fairfax</loc>
-    <lastmod>2024-04-01</lastmod>
-    <changefreq>monthly</changefreq>
+    <loc>https://dmvpipe.com/post-why-residential-plumbing-only</loc>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>yearly</changefreq>
     <priority>0.6</priority>
   </url>
+
+  <!-- City Landing Pages (URLs match app routes) -->
   <url>
-    <loc>https://dmvpipe.com/city-falls-church</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/arlington</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-mclean</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/alexandria</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-vienna</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/fairfax</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-reston</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/falls-church</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-herndon</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/mclean</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-annandale</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/vienna</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-springfield</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/reston</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-burke</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/herndon</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-centreville</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/annandale</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-chantilly</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/springfield</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-oakton</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/burke</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-tysons</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/centreville</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-great-falls</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/chantilly</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-lorton</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/oakton</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-sterling</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/tysons</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-ashburn</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/great-falls</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dmvpipe.com/city-leesburg</loc>
-    <lastmod>2024-04-01</lastmod>
+    <loc>https://dmvpipe.com/lorton</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://dmvpipe.com/sterling</loc>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://dmvpipe.com/ashburn</loc>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://dmvpipe.com/leesburg</loc>
+    <lastmod>2026-07-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
 </urlset>

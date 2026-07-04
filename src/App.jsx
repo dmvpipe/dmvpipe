@@ -3,7 +3,7 @@ import {
   Wrench, Home, Calendar, Phone, FileText, MessageSquare,
   AlertTriangle, CheckCircle, X, User, Clock, ShieldCheck,
   Droplet, MapPin, Send, Menu, LogOut, Info, Mail, Star, ChevronLeft,
-  ShoppingCart, Plus, Minus, Trash2, Camera
+  ShoppingCart, Plus, Minus, Trash2, Camera, Search
 } from 'lucide-react';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { initializeApp } from 'firebase/app';
@@ -134,63 +134,76 @@ const SERVICES = [
 
 // --- MATERIALS SHOP ---
 // Prices match Home Depot equivalents — GANAA MUST VERIFY/UPDATE regularly.
-// img: add a photo path (e.g. '/products/wh-gas-40.jpg' in the public folder) —
-// use manufacturer dealer images or your own photos, NOT Home Depot's images.
+// Images are original illustrations; swap any img for a real photo (e.g. '/products/photos/wh-gas-40.jpg').
 const PRODUCTS = [
   // Water Heaters
-  { id: 'wh-gas-40', cat: 'Water Heaters', name: 'Rheem Performance 40 Gal. Natural Gas Tank Water Heater', price: 549, unit: 'each', img: '/products/water-heaters.svg' },
-  { id: 'wh-gas-50', cat: 'Water Heaters', name: 'Rheem Performance 50 Gal. Natural Gas Tank Water Heater', price: 629, unit: 'each', img: '/products/water-heaters.svg' },
-  { id: 'wh-elec-40', cat: 'Water Heaters', name: 'Rheem Performance 40 Gal. Electric Tank Water Heater', price: 519, unit: 'each', img: '/products/water-heaters.svg' },
-  { id: 'wh-elec-50', cat: 'Water Heaters', name: 'Rheem Performance 50 Gal. Electric Tank Water Heater', price: 599, unit: 'each', img: '/products/water-heaters.svg' },
-  { id: 'wh-tankless', cat: 'Water Heaters', name: 'Rheem 8.4 GPM Tankless Gas Water Heater', price: 1299, unit: 'each', img: '/products/water-heaters.svg' },
-  { id: 'wh-pan', cat: 'Water Heaters', name: 'Water Heater Drain Pan with PVC Fitting (24 in.)', price: 27, unit: 'each', img: '/products/water-heaters.svg' },
-  { id: 'wh-exp-tank', cat: 'Water Heaters', name: 'Thermal Expansion Tank (2 Gal.)', price: 45, unit: 'each', img: '/products/water-heaters.svg' },
+  { id: 'wh-gas-40', cat: 'Water Heaters', name: 'Rheem Performance 40 Gal. Natural Gas Tank Water Heater', price: 549, unit: 'each', img: '/products/items/wh-gas.svg' },
+  { id: 'wh-gas-50', cat: 'Water Heaters', name: 'Rheem Performance 50 Gal. Natural Gas Tank Water Heater', price: 629, unit: 'each', img: '/products/items/wh-gas.svg' },
+  { id: 'wh-elec-40', cat: 'Water Heaters', name: 'Rheem Performance 40 Gal. Electric Tank Water Heater', price: 519, unit: 'each', img: '/products/items/wh-elec.svg' },
+  { id: 'wh-elec-50', cat: 'Water Heaters', name: 'Rheem Performance 50 Gal. Electric Tank Water Heater', price: 599, unit: 'each', img: '/products/items/wh-elec.svg' },
+  { id: 'wh-tankless', cat: 'Water Heaters', name: 'Rheem 8.4 GPM Tankless Gas Water Heater', price: 1299, unit: 'each', img: '/products/items/wh-tankless.svg' },
+  { id: 'wh-pan', cat: 'Water Heaters', name: 'Water Heater Drain Pan with PVC Fitting (24 in.)', price: 27, unit: 'each', img: '/products/items/wh-pan.svg' },
+  { id: 'wh-exp-tank', cat: 'Water Heaters', name: 'Thermal Expansion Tank (2 Gal.)', price: 45, unit: 'each', img: '/products/items/exp-tank.svg' },
+  { id: 'tprv-valve', cat: 'Water Heaters', name: 'T&P Relief Valve for Water Heater', price: 18, unit: 'each', img: '/products/items/tprv.svg' },
 
   // Toilets & Parts
-  { id: 'toilet-highline', cat: 'Toilets & Parts', name: 'Kohler Highline 2-Piece Elongated Toilet (1.28 GPF)', price: 239, unit: 'each', img: '/products/toilets.svg' },
-  { id: 'toilet-champion', cat: 'Toilets & Parts', name: 'American Standard Champion 4 Toilet (1.6 GPF)', price: 289, unit: 'each', img: '/products/toilets.svg' },
-  { id: 'toilet-cadet', cat: 'Toilets & Parts', name: 'American Standard Cadet 3 Round Toilet (Compact)', price: 199, unit: 'each', img: '/products/toilets.svg' },
-  { id: 'fill-valve-kit', cat: 'Toilets & Parts', name: 'Fluidmaster Fill Valve & Flapper Complete Repair Kit', price: 22, unit: 'kit', img: '/products/toilets.svg' },
-  { id: 'wax-ring', cat: 'Toilets & Parts', name: 'Wax-Free Toilet Seal Kit with Bolts', price: 10, unit: 'kit', img: '/products/toilets.svg' },
-  { id: 'toilet-seat', cat: 'Toilets & Parts', name: 'Soft-Close Elongated Toilet Seat (White)', price: 32, unit: 'each', img: '/products/toilets.svg' },
-  { id: 'toilet-flange', cat: 'Toilets & Parts', name: 'PVC Toilet Flange Repair Kit', price: 15, unit: 'kit', img: '/products/toilets.svg' },
+  { id: 'toilet-highline', cat: 'Toilets & Parts', name: 'Kohler Highline 2-Piece Elongated Toilet (1.28 GPF)', price: 239, unit: 'each', img: '/products/items/toilet.svg' },
+  { id: 'toilet-champion', cat: 'Toilets & Parts', name: 'American Standard Champion 4 Toilet (1.6 GPF)', price: 289, unit: 'each', img: '/products/items/toilet.svg' },
+  { id: 'toilet-cadet', cat: 'Toilets & Parts', name: 'American Standard Cadet 3 Round Toilet (Compact)', price: 199, unit: 'each', img: '/products/items/toilet.svg' },
+  { id: 'fill-valve-kit', cat: 'Toilets & Parts', name: 'Fluidmaster Fill Valve & Flapper Complete Repair Kit', price: 22, unit: 'kit', img: '/products/items/fill-valve.svg' },
+  { id: 'toilet-flapper', cat: 'Toilets & Parts', name: 'Korky 2 in. Toilet Flapper (Universal)', price: 9, unit: 'each', img: '/products/items/flapper.svg' },
+  { id: 'trip-lever', cat: 'Toilets & Parts', name: 'Toilet Trip Lever / Flush Handle (Chrome)', price: 12, unit: 'each', img: '/products/items/trip-lever.svg' },
+  { id: 'wax-ring', cat: 'Toilets & Parts', name: 'Wax Ring Kit with Brass Bolts', price: 8, unit: 'kit', img: '/products/items/wax-ring.svg' },
+  { id: 'toilet-seat', cat: 'Toilets & Parts', name: 'Soft-Close Elongated Toilet Seat (White)', price: 32, unit: 'each', img: '/products/items/toilet-seat.svg' },
+  { id: 'toilet-flange', cat: 'Toilets & Parts', name: 'PVC Toilet Flange Repair Kit', price: 15, unit: 'kit', img: '/products/items/flange.svg' },
 
   // Faucets & Sinks
-  { id: 'faucet-kitchen', cat: 'Faucets & Sinks', name: 'Moen Adler Single-Handle Kitchen Faucet with Sprayer', price: 89, unit: 'each', img: '/products/faucets.svg' },
-  { id: 'faucet-kitchen-pd', cat: 'Faucets & Sinks', name: 'Moen Arbor Pull-Down Kitchen Faucet (Spot Resist)', price: 229, unit: 'each', img: '/products/faucets.svg' },
-  { id: 'faucet-bath', cat: 'Faucets & Sinks', name: 'Delta Foundations 4 in. Bathroom Faucet (Chrome)', price: 59, unit: 'each', img: '/products/faucets.svg' },
-  { id: 'faucet-bath-brushed', cat: 'Faucets & Sinks', name: 'Moen Genta 4 in. Bathroom Faucet (Brushed Nickel)', price: 119, unit: 'each', img: '/products/faucets.svg' },
-  { id: 'sink-kitchen', cat: 'Faucets & Sinks', name: 'Stainless Steel Double-Bowl Drop-In Kitchen Sink (33 in.)', price: 189, unit: 'each', img: '/products/faucets.svg' },
-  { id: 'shower-valve', cat: 'Faucets & Sinks', name: 'Delta Shower Valve Trim Kit with Cartridge', price: 145, unit: 'kit', img: '/products/faucets.svg' },
-  { id: 'showerhead', cat: 'Faucets & Sinks', name: 'Moen Engage Magnetix Handheld Shower Head', price: 79, unit: 'each', img: '/products/faucets.svg' },
+  { id: 'faucet-kitchen', cat: 'Faucets & Sinks', name: 'Moen Adler Single-Handle Kitchen Faucet with Sprayer', price: 89, unit: 'each', img: '/products/items/faucet-kitchen.svg' },
+  { id: 'faucet-kitchen-pd', cat: 'Faucets & Sinks', name: 'Moen Arbor Pull-Down Kitchen Faucet (Spot Resist)', price: 229, unit: 'each', img: '/products/items/faucet-pd.svg' },
+  { id: 'faucet-bath', cat: 'Faucets & Sinks', name: 'Delta Foundations 4 in. Bathroom Faucet (Chrome)', price: 59, unit: 'each', img: '/products/items/faucet-bath.svg' },
+  { id: 'faucet-bath-brushed', cat: 'Faucets & Sinks', name: 'Moen Genta 4 in. Bathroom Faucet (Brushed Nickel)', price: 119, unit: 'each', img: '/products/items/faucet-bath.svg' },
+  { id: 'sink-kitchen', cat: 'Faucets & Sinks', name: 'Stainless Steel Double-Bowl Drop-In Kitchen Sink (33 in.)', price: 189, unit: 'each', img: '/products/items/sink-ss.svg' },
+  { id: 'shower-valve', cat: 'Faucets & Sinks', name: 'Delta Shower Valve Trim Kit with Cartridge', price: 145, unit: 'kit', img: '/products/items/shower-valve.svg' },
+  { id: 'showerhead', cat: 'Faucets & Sinks', name: 'Moen Engage Magnetix Handheld Shower Head', price: 79, unit: 'each', img: '/products/items/showerhead.svg' },
+  { id: 'faucet-aerator', cat: 'Faucets & Sinks', name: 'Faucet Aerator 1.5 GPM (2-Pack)', price: 6, unit: 'pack', img: '/products/items/aerator.svg' },
 
   // Drains & Disposals
-  { id: 'disposal-badger5', cat: 'Drains & Disposals', name: 'InSinkErator Badger 5, 1/2 HP Garbage Disposal', price: 109, unit: 'each', img: '/products/drains.svg' },
-  { id: 'disposal-evolution', cat: 'Drains & Disposals', name: 'InSinkErator Evolution Compact 3/4 HP (Quiet)', price: 219, unit: 'each', img: '/products/drains.svg' },
-  { id: 'ptrap-kit', cat: 'Drains & Disposals', name: 'PVC P-Trap Kit 1-1/2 in. with Fittings', price: 9, unit: 'kit', img: '/products/drains.svg' },
-  { id: 'pop-up', cat: 'Drains & Disposals', name: 'Bathroom Sink Pop-Up Drain Assembly', price: 18, unit: 'each', img: '/products/drains.svg' },
-  { id: 'tub-drain', cat: 'Drains & Disposals', name: 'Tub Drain & Overflow Trim Kit (Chrome)', price: 39, unit: 'kit', img: '/products/drains.svg' },
+  { id: 'disposal-badger5', cat: 'Drains & Disposals', name: 'InSinkErator Badger 5, 1/2 HP Garbage Disposal', price: 109, unit: 'each', img: '/products/items/disposal.svg' },
+  { id: 'disposal-evolution', cat: 'Drains & Disposals', name: 'InSinkErator Evolution Compact 3/4 HP (Quiet)', price: 219, unit: 'each', img: '/products/items/disposal.svg' },
+  { id: 'ptrap-kit', cat: 'Drains & Disposals', name: 'PVC P-Trap Kit 1-1/2 in. with Fittings', price: 9, unit: 'kit', img: '/products/items/ptrap.svg' },
+  { id: 'pop-up', cat: 'Drains & Disposals', name: 'Bathroom Sink Pop-Up Drain Assembly', price: 18, unit: 'each', img: '/products/items/popup.svg' },
+  { id: 'tub-drain', cat: 'Drains & Disposals', name: 'Tub Drain & Overflow Trim Kit (Chrome)', price: 39, unit: 'kit', img: '/products/items/tub-drain.svg' },
+  { id: 'sink-strainer', cat: 'Drains & Disposals', name: 'Kitchen Sink Basket Strainer (Stainless)', price: 14, unit: 'each', img: '/products/items/strainer.svg' },
+  { id: 'hair-snake', cat: 'Drains & Disposals', name: 'Plastic Drain Hair Snake (3-Pack)', price: 6, unit: 'pack', img: '/products/items/hair-snake.svg' },
 
   // Pumps
-  { id: 'sump-13hp', cat: 'Pumps', name: 'Everbilt 1/3 HP Submersible Sump Pump', price: 159, unit: 'each', img: '/products/pumps.svg' },
-  { id: 'sump-12hp', cat: 'Pumps', name: 'Zoeller M53 1/3 HP Cast Iron Sump Pump (Pro Grade)', price: 219, unit: 'each', img: '/products/pumps.svg' },
-  { id: 'sump-battery', cat: 'Pumps', name: 'Battery Backup Sump Pump System', price: 449, unit: 'each', img: '/products/pumps.svg' },
-  { id: 'sewage-ejector', cat: 'Pumps', name: '1/2 HP Sewage Ejector Pump', price: 289, unit: 'each', img: '/products/pumps.svg' },
+  { id: 'sump-13hp', cat: 'Pumps', name: 'Everbilt 1/3 HP Submersible Sump Pump', price: 159, unit: 'each', img: '/products/items/sump.svg' },
+  { id: 'sump-12hp', cat: 'Pumps', name: 'Zoeller M53 1/3 HP Cast Iron Sump Pump (Pro Grade)', price: 219, unit: 'each', img: '/products/items/sump.svg' },
+  { id: 'sump-battery', cat: 'Pumps', name: 'Battery Backup Sump Pump System', price: 449, unit: 'each', img: '/products/items/sump-battery.svg' },
+  { id: 'sewage-ejector', cat: 'Pumps', name: '1/2 HP Sewage Ejector Pump', price: 289, unit: 'each', img: '/products/items/sewage.svg' },
 
   // Pipes & Fittings
-  { id: 'pex-a-34', cat: 'Pipes & Fittings', name: 'PEX-A Tubing 3/4 in. x 100 ft. Roll', price: 89, unit: 'roll', img: '/products/pipes.svg' },
-  { id: 'pex-a-12', cat: 'Pipes & Fittings', name: 'PEX-A Tubing 1/2 in. x 100 ft. Roll', price: 55, unit: 'roll', img: '/products/pipes.svg' },
-  { id: 'copper-34', cat: 'Pipes & Fittings', name: 'Copper Pipe Type L 3/4 in. x 10 ft.', price: 42, unit: 'stick', img: '/products/pipes.svg' },
-  { id: 'sharkbite-fittings', cat: 'Pipes & Fittings', name: 'SharkBite Push-Fit Coupling 3/4 in. (2-Pack)', price: 19, unit: 'pack', img: '/products/pipes.svg' },
-  { id: 'pvc-dwv', cat: 'Pipes & Fittings', name: 'PVC DWV Pipe 2 in. x 10 ft.', price: 17, unit: 'stick', img: '/products/pipes.svg' },
+  { id: 'pex-a-34', cat: 'Pipes & Fittings', name: 'PEX-A Tubing 3/4 in. x 100 ft. Roll', price: 89, unit: 'roll', img: '/products/items/pex.svg' },
+  { id: 'pex-a-12', cat: 'Pipes & Fittings', name: 'PEX-A Tubing 1/2 in. x 100 ft. Roll', price: 55, unit: 'roll', img: '/products/items/pex.svg' },
+  { id: 'copper-34', cat: 'Pipes & Fittings', name: 'Copper Pipe Type L 3/4 in. x 10 ft.', price: 42, unit: 'stick', img: '/products/items/copper.svg' },
+  { id: 'sharkbite-fittings', cat: 'Pipes & Fittings', name: 'SharkBite Push-Fit Coupling 3/4 in. (2-Pack)', price: 19, unit: 'pack', img: '/products/items/sharkbite.svg' },
+  { id: 'pvc-dwv', cat: 'Pipes & Fittings', name: 'PVC DWV Pipe 2 in. x 10 ft.', price: 17, unit: 'stick', img: '/products/items/pvc.svg' },
+  { id: 'pipe-insulation', cat: 'Pipes & Fittings', name: 'Foam Pipe Insulation 3/4 in. x 6 ft.', price: 5, unit: 'each', img: '/products/items/insulation.svg' },
 
   // Valves & Supply Lines
-  { id: 'supply-lines', cat: 'Valves & Supply Lines', name: 'Braided Stainless Faucet Supply Lines (Pair)', price: 12, unit: 'pair', img: '/products/valves.svg' },
-  { id: 'toilet-supply', cat: 'Valves & Supply Lines', name: 'Braided Stainless Toilet Supply Line', price: 8, unit: 'each', img: '/products/valves.svg' },
-  { id: 'shutoff-valve', cat: 'Valves & Supply Lines', name: '1/4-Turn Angle Shut-Off Valve 1/2 in.', price: 11, unit: 'each', img: '/products/valves.svg' },
-  { id: 'main-shutoff', cat: 'Valves & Supply Lines', name: 'Main Shut-Off Ball Valve 3/4 in. (Full Port)', price: 24, unit: 'each', img: '/products/valves.svg' },
-  { id: 'prv-valve', cat: 'Valves & Supply Lines', name: 'Water Pressure Reducing Valve 3/4 in.', price: 89, unit: 'each', img: '/products/valves.svg' },
-  { id: 'washer-hoses', cat: 'Valves & Supply Lines', name: 'Washing Machine Hoses, Braided Stainless (Pair)', price: 25, unit: 'pair', img: '/products/valves.svg' },
+  { id: 'supply-lines', cat: 'Valves & Supply Lines', name: 'Braided Stainless Faucet Supply Lines (Pair)', price: 12, unit: 'pair', img: '/products/items/supply-line.svg' },
+  { id: 'toilet-supply', cat: 'Valves & Supply Lines', name: 'Braided Stainless Toilet Supply Line', price: 8, unit: 'each', img: '/products/items/supply-line.svg' },
+  { id: 'shutoff-valve', cat: 'Valves & Supply Lines', name: '1/4-Turn Angle Shut-Off Valve 1/2 in.', price: 11, unit: 'each', img: '/products/items/angle-stop.svg' },
+  { id: 'main-shutoff', cat: 'Valves & Supply Lines', name: 'Main Shut-Off Ball Valve 3/4 in. (Full Port)', price: 24, unit: 'each', img: '/products/items/ball-valve.svg' },
+  { id: 'prv-valve', cat: 'Valves & Supply Lines', name: 'Water Pressure Reducing Valve 3/4 in.', price: 89, unit: 'each', img: '/products/items/prv.svg' },
+  { id: 'washer-hoses', cat: 'Valves & Supply Lines', name: 'Washing Machine Hoses, Braided Stainless (Pair)', price: 25, unit: 'pair', img: '/products/items/washer-hose.svg' },
+  { id: 'hose-bibb', cat: 'Valves & Supply Lines', name: 'Frost-Free Outdoor Hose Bibb / Spigot', price: 29, unit: 'each', img: '/products/items/hosebib.svg' },
+  { id: 'gas-connector', cat: 'Valves & Supply Lines', name: 'Gas Appliance Flex Connector 3/4 in. x 36 in.', price: 19, unit: 'each', img: '/products/items/gasflex.svg' },
+
+  // Small Parts & Repair
+  { id: 'teflon-tape', cat: 'Small Parts & Repair', name: 'PTFE Thread Seal Tape (Teflon, 2-Pack)', price: 2, unit: 'pack', img: '/products/items/teflon.svg' },
+  { id: 'plumbers-putty', cat: 'Small Parts & Repair', name: "Plumber's Putty 14 oz.", price: 5, unit: 'tub', img: '/products/items/putty.svg' },
+  { id: 'silicone-caulk', cat: 'Small Parts & Repair', name: 'Kitchen & Bath Silicone Caulk (White)', price: 9, unit: 'tube', img: '/products/items/caulk.svg' },
 ];
 
 const CATEGORY_ICONS = {
@@ -942,7 +955,10 @@ function CityView({ navigate, city }) {
 }
 
 function ShopView({ navigate, cart, updateCart }) {
-  const categories = [...new Set(PRODUCTS.map(p => p.cat))];
+  const [search, setSearch] = useState('');
+  const q = search.trim().toLowerCase();
+  const visible = q ? PRODUCTS.filter(p => p.name.toLowerCase().includes(q) || p.cat.toLowerCase().includes(q)) : PRODUCTS;
+  const categories = [...new Set(visible.map(p => p.cat))];
   const cartItems = PRODUCTS.filter(p => cart[p.id]);
   const total = cartItems.reduce((sum, p) => sum + p.price * cart[p.id], 0);
 
@@ -959,19 +975,37 @@ function ShopView({ navigate, cart, updateCart }) {
       <div className="grid lg:grid-cols-3 gap-8 items-start">
         {/* Catalog */}
         <div className="lg:col-span-2 space-y-10">
-          {/* Category jump pills */}
-          <div className="flex flex-wrap gap-2 -mb-4">
-            {categories.map(cat => (
-              <a key={cat} href={`#cat-${cat.replace(/[^a-z]/gi, '-')}`} className="bg-white border border-stone-200 hover:border-blue-400 text-stone-700 text-xs font-bold px-3 py-1.5 rounded-full transition-colors">
-                {cat}
-              </a>
-            ))}
+          {/* Sticky search + category menu (stays visible while scrolling) */}
+          <div className="sticky top-20 z-30 bg-[#fafaf9] pt-2 pb-3 border-b border-stone-200">
+            <div className="relative mb-3">
+              <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search materials… e.g. water heater, wax ring, faucet"
+                className="w-full bg-white border border-stone-200 rounded-full pl-11 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm"
+              />
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {categories.map(cat => (
+                <a key={cat} href={`#cat-${cat.replace(/[^a-z]/gi, '-')}`} className="whitespace-nowrap shrink-0 bg-white border border-stone-200 hover:border-blue-400 hover:text-blue-700 text-stone-700 text-xs font-bold px-3.5 py-2 rounded-full transition-colors shadow-sm">
+                  {cat}
+                </a>
+              ))}
+            </div>
           </div>
+          {visible.length === 0 && (
+            <div className="text-center py-12 bg-white rounded-2xl border border-stone-100">
+              <p className="font-bold text-stone-800 mb-2">No items match "{search}"</p>
+              <p className="text-sm text-stone-500">Ganaa can source any residential plumbing part at store price — <button onClick={() => navigate('contact')} className="text-blue-700 underline">send us a message</button>.</p>
+            </div>
+          )}
           {categories.map(cat => (
-            <div key={cat} id={`cat-${cat.replace(/[^a-z]/gi, '-')}`} className="scroll-mt-28">
+            <div key={cat} id={`cat-${cat.replace(/[^a-z]/gi, '-')}`} className="scroll-mt-52">
               <h2 className="text-xl font-extrabold text-stone-900 mb-4">{cat}</h2>
               <div className="grid sm:grid-cols-2 gap-4">
-                {PRODUCTS.filter(p => p.cat === cat).map(p => (
+                {visible.filter(p => p.cat === cat).map(p => (
                   <div key={p.id} className="bg-white rounded-2xl border border-stone-100 shadow-sm p-4 flex flex-col">
                     <div className="h-28 rounded-xl mb-4 overflow-hidden bg-gradient-to-br from-blue-50 to-stone-100 flex items-center justify-center text-blue-200">
                       {p.img ? (

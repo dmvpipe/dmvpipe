@@ -71,15 +71,20 @@ const compressImage = (file, maxDim = 1000, quality = 0.65) => new Promise((reso
   img.src = url;
 });
 
+const withTimeout = (promise, ms) => Promise.race([
+  promise,
+  new Promise((_, reject) => setTimeout(() => reject(new Error('upload timeout')), ms))
+]);
+
 const uploadLeadPhotos = async (files) => {
   if (!storage || !files || !files.length) return [];
-  // Compress + upload all photos in parallel for speed
+  // Compress + upload all photos in parallel; give up after 20s so the UI never hangs
   const results = await Promise.all(files.slice(0, 3).map(async (f) => {
     try {
       const blob = await compressImage(f);
       const r = storageRef(storage, `lead-photos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`);
-      await uploadBytes(r, blob, { contentType: 'image/jpeg' });
-      return await getDownloadURL(r);
+      await withTimeout(uploadBytes(r, blob, { contentType: 'image/jpeg' }), 20000);
+      return await withTimeout(getDownloadURL(r), 8000);
     } catch (e) {
       console.error('Photo upload failed (continuing without it):', e);
       return null;
@@ -2037,7 +2042,7 @@ function ChatbotUI({ user, db, appId }) {
           next = 'ask_phone';
         } else {
           l.phone = userMsg;
-          out.push(bot("Got it. And what city is the home in? (We serve 20 cities across Northern Virginia.)"));
+          out.push(bot("Got it. What's the full service address? (Street and city — e.g. 123 Main St, Arlington, VA)"));
           next = 'ask_city';
         }
         break;
@@ -2047,7 +2052,7 @@ function ChatbotUI({ user, db, appId }) {
         l.address = userMsg;
         if (l.urgent) {
           l.time = 'ASAP / Emergency';
-          out.push(bot(`Thank you. Here's what I have:\n\n• Issue: ${ISSUE_LABELS[l.issueType] || 'Plumbing issue'} — ${l.details || l.issue}\n• Name: ${l.name}\n• Phone: ${l.phone}\n• City: ${l.address}\n• Priority: 🚨 URGENT\n\nGanaa has been notified and will reach out as soon as possible. If this is a severe emergency, don't wait — call him directly at 703-655-6351.`));
+          out.push(bot(`Thank you. Here's what I have:\n\n• Issue: ${ISSUE_LABELS[l.issueType] || 'Plumbing issue'} — ${l.details || l.issue}\n• Name: ${l.name}\n• Phone: ${l.phone}\n• Address: ${l.address}\n• Priority: 🚨 URGENT\n\nGanaa has been notified and will reach out as soon as possible. If this is a severe emergency, don't wait — call him directly at 703-655-6351.`));
           next = 'finish';
         } else {
           out.push(bot("Almost done! When would work best for a visit?"));
@@ -2058,7 +2063,7 @@ function ChatbotUI({ user, db, appId }) {
 
       case 'ask_time': {
         l.time = userMsg;
-        out.push(bot(`All set! Here's what I've sent to Ganaa:\n\n• Issue: ${ISSUE_LABELS[l.issueType] || 'Plumbing issue'} — ${l.details || l.issue}\n• Name: ${l.name}\n• Phone: ${l.phone}\n• City: ${l.address}\n• Preferred time: ${l.time}\n\nHe personally reviews every request and will confirm with you shortly — usually within the hour during the day. Thanks for choosing DMVPipe!`));
+        out.push(bot(`All set! Here's what I've sent to Ganaa:\n\n• Issue: ${ISSUE_LABELS[l.issueType] || 'Plumbing issue'} — ${l.details || l.issue}\n• Name: ${l.name}\n• Phone: ${l.phone}\n• Address: ${l.address}\n• Preferred time: ${l.time}\n\nHe personally reviews every request and will confirm with you shortly — usually within the hour during the day. Thanks for choosing DMVPipe!`));
         next = 'finish';
         break;
       }

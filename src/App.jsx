@@ -995,7 +995,25 @@ function ShopView({ navigate, cart, updateCart }) {
   const total = cartItems.reduce((sum, p) => sum + p.price * cart[p.id], 0);
 
   return (
-    <div className="animate-in fade-in duration-500 py-12 md:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="animate-in fade-in duration-500 py-12 md:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32 lg:pb-16">
+      {/* Mobile floating cart bar */}
+      {cartItems.length > 0 && (
+        <div className="lg:hidden fixed bottom-24 left-3 right-3 z-40">
+          <button
+            onClick={() => navigate('account')}
+            className="w-full bg-blue-900 text-white rounded-2xl shadow-2xl shadow-blue-900/30 px-5 py-4 flex items-center justify-between active:bg-blue-950"
+          >
+            <span className="flex items-center gap-3 font-bold">
+              <span className="relative">
+                <ShoppingCart className="w-6 h-6" />
+                <span className="absolute -top-2 -right-2 bg-amber-400 text-stone-900 text-[10px] font-extrabold rounded-full w-5 h-5 flex items-center justify-center">{cartItems.reduce((a, p) => a + cart[p.id], 0)}</span>
+              </span>
+              ${total} in materials
+            </span>
+            <span className="bg-amber-400 text-stone-900 font-extrabold text-sm px-4 py-2 rounded-full">Book Now &rarr;</span>
+          </button>
+        </div>
+      )}
       <div className="text-center max-w-3xl mx-auto mb-12">
         <span className="inline-flex items-center gap-2 bg-blue-50 text-blue-800 px-4 py-1.5 rounded-full text-sm font-bold mb-5 border border-blue-100">
           <ShoppingCart className="w-4 h-4" /> Materials Shop
@@ -1039,24 +1057,22 @@ function ShopView({ navigate, cart, updateCart }) {
               <div className="grid sm:grid-cols-2 gap-4">
                 {visible.filter(p => p.cat === cat).map(p => (
                   <div key={p.id} className="bg-white rounded-2xl border border-stone-100 shadow-sm p-4 flex flex-col">
-                    <div className="h-28 rounded-xl mb-4 overflow-hidden bg-gradient-to-br from-blue-50 to-stone-100">
+                    <div className="h-44 sm:h-32 rounded-xl mb-4 overflow-hidden bg-gradient-to-br from-blue-50 to-stone-100">
                       <ProductImage p={p} />
                     </div>
-                    <h3 className="font-bold text-stone-900 text-sm leading-snug grow">{p.name}</h3>
-                    <div className="flex items-center justify-between mt-4">
-                      <p className="font-extrabold text-blue-800 text-lg">${p.price}<span className="text-xs text-stone-400 font-semibold"> /{p.unit}</span></p>
-                      {cart[p.id] ? (
-                        <div className="flex items-center gap-2 bg-blue-50 rounded-full px-2 py-1">
-                          <button onClick={() => updateCart(p.id, -1)} aria-label="Remove one" className="p-1.5 rounded-full hover:bg-blue-100 text-blue-800"><Minus className="w-4 h-4"/></button>
-                          <span className="font-bold text-blue-900 text-sm min-w-[1.25rem] text-center">{cart[p.id]}</span>
-                          <button onClick={() => updateCart(p.id, 1)} aria-label="Add one" className="p-1.5 rounded-full hover:bg-blue-100 text-blue-800"><Plus className="w-4 h-4"/></button>
-                        </div>
-                      ) : (
-                        <button onClick={() => updateCart(p.id, 1)} className="bg-blue-900 hover:bg-blue-800 text-white text-sm font-bold px-4 py-2 rounded-full transition-colors flex items-center gap-1.5">
-                          <Plus className="w-4 h-4"/> Add
-                        </button>
-                      )}
-                    </div>
+                    <h3 className="font-bold text-stone-900 text-base sm:text-sm leading-snug grow">{p.name}</h3>
+                    <p className="font-extrabold text-blue-800 text-2xl sm:text-lg mt-2">${p.price}<span className="text-sm sm:text-xs text-stone-400 font-semibold"> /{p.unit}</span></p>
+                    {cart[p.id] ? (
+                      <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl px-2 py-1.5 mt-3">
+                        <button onClick={() => updateCart(p.id, -1)} aria-label="Remove one" className="p-3 sm:p-2 rounded-lg hover:bg-blue-100 active:bg-blue-200 text-blue-800"><Minus className="w-5 h-5"/></button>
+                        <span className="font-extrabold text-blue-900 text-lg">{cart[p.id]} <span className="text-xs font-semibold text-blue-700/70">in cart</span></span>
+                        <button onClick={() => updateCart(p.id, 1)} aria-label="Add one" className="p-3 sm:p-2 rounded-lg hover:bg-blue-100 active:bg-blue-200 text-blue-800"><Plus className="w-5 h-5"/></button>
+                      </div>
+                    ) : (
+                      <button onClick={() => updateCart(p.id, 1)} className="w-full mt-3 bg-blue-900 hover:bg-blue-800 active:bg-blue-950 text-white text-base sm:text-sm font-bold py-3.5 sm:py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <Plus className="w-5 h-5"/> Add to Cart
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

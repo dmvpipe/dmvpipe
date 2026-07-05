@@ -1859,8 +1859,28 @@ function ChatbotUI({ user, db, appId }) {
   const [loading, setLoading] = useState(false);
   const [chatState, setChatState] = useState('init');
   const [lead, setLead] = useState({ name: '', phone: '', issue: '', issueType: '', details: '', address: '', time: '', urgent: false });
-  const [photos, setPhotos] = useState([]);
+  const [leadPhotoUrls, setLeadPhotoUrls] = useState([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const photoInputRef = useRef(null);
   const messagesEndRef = useRef(null);
+
+  const attachPhotos = async (fileList) => {
+    const remaining = 3 - leadPhotoUrls.length;
+    const files = Array.from(fileList).filter(f => f.type.startsWith('image/')).slice(0, Math.max(0, remaining));
+    if (!files.length) return;
+    // Show the photos in the chat immediately, like a sent message
+    const previews = files.map(f => URL.createObjectURL(f));
+    setMessages(prev => [...prev, { images: previews, isBot: false }]);
+    setUploadingPhotos(true);
+    const urls = await uploadLeadPhotos(files);
+    setUploadingPhotos(false);
+    if (urls.length) {
+      setLeadPhotoUrls(prev => [...prev, ...urls].slice(0, 3));
+      setMessages(prev => [...prev, { text: urls.length === 1 ? "📷 Got the photo — Ganaa will review it before the visit. That really helps him bring the right parts!" : `📷 Got ${urls.length} photos — Ganaa will review them before the visit. That really helps him bring the right parts!`, isBot: true }]);
+    } else {
+      setMessages(prev => [...prev, { text: "Hmm — the photo didn't upload. No problem: you can also text it directly to Ganaa at 703-655-6351 after booking.", isBot: true }]);
+    }
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -2084,7 +2104,7 @@ function ChatbotUI({ user, db, appId }) {
   const saveLeadToDatabase = async (data) => {
     if (!db) return;
     try {
-      const photoUrls = await uploadLeadPhotos(photos);
+      const photoUrls = leadPhotoUrls;
       notifyGanaa(`${data.urgent ? '🚨 URGENT chat lead' : '💬 New chat lead'} — DMVPipe`, {
         Priority: data.urgent ? 'URGENT' : 'Normal',
         Issue: ISSUE_LABELS[data.issueType] || 'Plumbing issue',
@@ -2118,11 +2138,24 @@ function ChatbotUI({ user, db, appId }) {
       <div className="grow min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}>
-            <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap leading-relaxed ${msg.isBot ? 'bg-white border border-stone-200 text-stone-800 rounded-tl-none shadow-sm' : 'bg-blue-700 text-white rounded-tr-none shadow-sm'}`}>
-              {msg.text}
-            </div>
+            {msg.images ? (
+              <div className="max-w-[85%] bg-blue-700 rounded-2xl rounded-tr-none p-1.5 shadow-sm flex gap-1.5">
+                {msg.images.map((src, j) => (
+                  <img key={j} src={src} alt={`Sent photo ${j + 1}`} className="w-20 h-20 object-cover rounded-xl" />
+                ))}
+              </div>
+            ) : (
+              <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap leading-relaxed ${msg.isBot ? 'bg-white border border-stone-200 text-stone-800 rounded-tl-none shadow-sm' : 'bg-blue-700 text-white rounded-tr-none shadow-sm'}`}>
+                {msg.text}
+              </div>
+            )}
           </div>
         ))}
+        {uploadingPhotos && (
+          <div className="flex justify-end">
+            <div className="bg-blue-100 text-blue-800 rounded-full px-4 py-1.5 text-xs font-semibold animate-pulse">Sending photo…</div>
+          </div>
+        )}
 
         {loading && (
           <div className="flex justify-start">
@@ -2161,25 +2194,30 @@ function ChatbotUI({ user, db, appId }) {
       )}
 
       <div className="p-3 bg-white border-t border-stone-200">
-        {chatState !== 'finish' && (photos.length > 0 || chatState !== 'ask_issue') && (
-          <div className="mb-2 flex items-center gap-3">
-            <PhotoPicker photos={photos} setPhotos={setPhotos} compact={true} />
-            <p className="text-[11px] text-stone-400 leading-tight">Add up to 3 photos of the problem so Ganaa can bring the right parts.</p>
-          </div>
-        )}
-        <form onSubmit={handleSend} className="flex gap-2">
+        <form onSubmit={handleSend} className="flex gap-2 items-center">
+          <input ref={photoInputRef} type="file" accept="image/*" multiple hidden onChange={(e) => { attachPhotos(e.target.files); e.target.value = ''; }} />
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            disabled={uploadingPhotos || chatState === 'finish' || leadPhotoUrls.length >= 3}
+            aria-label="Send a photo of the problem"
+            title={leadPhotoUrls.length >= 3 ? 'Photo limit reached (3)' : 'Send a photo of the problem'}
+            className="bg-stone-100 hover:bg-blue-50 text-stone-500 hover:text-blue-700 p-2.5 rounded-full transition-colors disabled:opacity-40 shrink-0"
+          >
+            <Camera className="w-5 h-5" />
+          </button>
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={chatState === 'finish' ? "Chat finished — call us anytime!" : "Type your answer..."}
+            placeholder={chatState === 'finish' ? "Chat finished — call us anytime!" : "Type here, or tap 📷 to send a photo"}
             disabled={loading || chatState === 'finish'}
-            className="grow bg-stone-100 border border-stone-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-all"
+            className="grow min-w-0 bg-stone-100 border border-stone-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-all"
           />
           <button
             type="submit"
             disabled={loading || !input.trim() || chatState === 'finish'}
-            className="bg-blue-700 text-white p-2.5 rounded-full hover:bg-blue-800 transition-colors disabled:opacity-50 shadow-md flex items-center justify-center"
+            className="bg-blue-700 text-white p-2.5 rounded-full hover:bg-blue-800 transition-colors disabled:opacity-50 shadow-md flex items-center justify-center shrink-0"
           >
             <Send className="w-4 h-4 ml-0.5" />
           </button>

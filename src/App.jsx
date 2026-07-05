@@ -1056,23 +1056,27 @@ function ShopView({ navigate, cart, updateCart }) {
               <h2 className="text-xl font-extrabold text-stone-900 mb-4">{cat}</h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 {visible.filter(p => p.cat === cat).map(p => (
-                  <div key={p.id} className="bg-white rounded-2xl border border-stone-100 shadow-sm p-4 flex flex-col">
-                    <div className="h-44 sm:h-32 rounded-xl mb-4 overflow-hidden bg-gradient-to-br from-blue-50 to-stone-100">
+                  <div key={p.id} className="bg-white rounded-2xl border border-stone-100 shadow-sm p-3 sm:p-4 flex flex-row sm:flex-col gap-4 sm:gap-0">
+                    <div className="w-36 h-36 shrink-0 sm:w-full sm:h-32 rounded-xl sm:mb-4 overflow-hidden bg-gradient-to-br from-blue-50 to-stone-100">
                       <ProductImage p={p} />
                     </div>
-                    <h3 className="font-bold text-stone-900 text-base sm:text-sm leading-snug grow">{p.name}</h3>
-                    <p className="font-extrabold text-blue-800 text-2xl sm:text-lg mt-2">${p.price}<span className="text-sm sm:text-xs text-stone-400 font-semibold"> /{p.unit}</span></p>
-                    {cart[p.id] ? (
-                      <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl px-2 py-1.5 mt-3">
-                        <button onClick={() => updateCart(p.id, -1)} aria-label="Remove one" className="p-3 sm:p-2 rounded-lg hover:bg-blue-100 active:bg-blue-200 text-blue-800"><Minus className="w-5 h-5"/></button>
-                        <span className="font-extrabold text-blue-900 text-lg">{cart[p.id]} <span className="text-xs font-semibold text-blue-700/70">in cart</span></span>
-                        <button onClick={() => updateCart(p.id, 1)} aria-label="Add one" className="p-3 sm:p-2 rounded-lg hover:bg-blue-100 active:bg-blue-200 text-blue-800"><Plus className="w-5 h-5"/></button>
+                    <div className="flex flex-col grow min-w-0">
+                      <h3 className="font-bold text-stone-900 text-sm leading-snug">{p.name}</h3>
+                      <p className="font-extrabold text-blue-800 text-xl sm:text-lg mt-1">${p.price}<span className="text-xs text-stone-400 font-semibold"> /{p.unit}</span></p>
+                      <div className="mt-auto pt-2">
+                        {cart[p.id] ? (
+                          <div className="inline-flex items-center gap-1 bg-blue-50 border border-blue-100 rounded-full px-1.5 py-1">
+                            <button onClick={() => updateCart(p.id, -1)} aria-label="Remove one" className="p-2 rounded-full hover:bg-blue-100 active:bg-blue-200 text-blue-800"><Minus className="w-4 h-4"/></button>
+                            <span className="font-extrabold text-blue-900 text-base min-w-[1.5rem] text-center">{cart[p.id]}</span>
+                            <button onClick={() => updateCart(p.id, 1)} aria-label="Add one" className="p-2 rounded-full hover:bg-blue-100 active:bg-blue-200 text-blue-800"><Plus className="w-4 h-4"/></button>
+                          </div>
+                        ) : (
+                          <button onClick={() => updateCart(p.id, 1)} className="inline-flex items-center gap-1.5 bg-blue-900 hover:bg-blue-800 active:bg-blue-950 text-white text-sm font-bold px-6 py-2.5 rounded-full transition-colors">
+                            <Plus className="w-4 h-4"/> Add
+                          </button>
+                        )}
                       </div>
-                    ) : (
-                      <button onClick={() => updateCart(p.id, 1)} className="w-full mt-3 bg-blue-900 hover:bg-blue-800 active:bg-blue-950 text-white text-base sm:text-sm font-bold py-3.5 sm:py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2">
-                        <Plus className="w-5 h-5"/> Add to Cart
-                      </button>
-                    )}
+                    </div>
                   </div>
                 ))}
               </div>

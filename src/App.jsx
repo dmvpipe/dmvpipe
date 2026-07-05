@@ -1004,7 +1004,7 @@ function ShopView({ navigate, cart, updateCart }) {
     <div className="animate-in fade-in duration-500 py-12 md:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32 lg:pb-16">
       {/* Mobile floating cart bar */}
       {cartItems.length > 0 && (
-        <div className="lg:hidden fixed bottom-24 left-3 right-3 z-40">
+        <div className="lg:hidden fixed bottom-24 left-4 right-4 z-40 max-w-md mx-auto">
           <button
             onClick={() => navigate('account')}
             className="w-full bg-blue-900 text-white rounded-2xl shadow-2xl shadow-blue-900/30 px-5 py-4 flex items-center justify-between active:bg-blue-950"
@@ -1031,8 +1031,10 @@ function ShopView({ navigate, cart, updateCart }) {
       <div className="grid lg:grid-cols-3 gap-8 items-start">
         {/* Catalog */}
         <div className="lg:col-span-2 space-y-10">
-          {/* Sticky search + category menu (stays visible while scrolling) */}
-          <div className="sticky top-20 z-30 bg-[#fafaf9] pt-2 pb-3 border-b border-stone-200">
+          {/* Sticky search + category menu (stays visible while scrolling).
+              Negative margins make its background span the full screen width on
+              mobile so cards never peek out beside it. */}
+          <div className="sticky top-20 z-30 bg-[#fafaf9] pt-2 pb-3 border-b border-stone-200 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
             <div className="relative mb-3">
               <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
               <input

@@ -204,6 +204,19 @@ const PRODUCTS = [
   { id: 'teflon-tape', cat: 'Small Parts & Repair', name: 'PTFE Thread Seal Tape (Teflon, 2-Pack)', price: 2, unit: 'pack', img: '/products/items/teflon.svg' },
   { id: 'plumbers-putty', cat: 'Small Parts & Repair', name: "Plumber's Putty 14 oz.", price: 5, unit: 'tub', img: '/products/items/putty.svg' },
   { id: 'silicone-caulk', cat: 'Small Parts & Repair', name: 'Kitchen & Bath Silicone Caulk (White)', price: 9, unit: 'tube', img: '/products/items/caulk.svg' },
+
+  // Pro & Specialty (imported from Ganaa's curation list — TEST BATCH.
+  // PRICES ARE ESTIMATES, Ganaa must verify before customers order.)
+  { id: 'drain-tape', cat: 'Pro & Specialty', name: 'Drain & Pipe Repair Tape (Self-Fusing)', price: 8, unit: 'roll', img: null },
+  { id: 'torch-regulator', cat: 'Pro & Specialty', name: 'TurboTorch Acetylene Regulator', price: 95, unit: 'each', img: null },
+  { id: 'acetylene-refill', cat: 'Pro & Specialty', name: 'Acetylene B-Tank Refill / Exchange', price: 75, unit: 'each', img: null },
+  { id: 'acid-neutralizer', cat: 'Pro & Specialty', name: 'RectorSeal Condensate Acid Neutralizer Kit', price: 45, unit: 'kit', img: null },
+  { id: 'acid-test-kit', cat: 'Pro & Specialty', name: 'Refrigeration Oil Acid Test Kit', price: 22, unit: 'kit', img: null },
+  { id: 'caulk-adapter', cat: 'Pro & Specialty', name: 'Caulk Gun Adapter / Nozzle Set', price: 6, unit: 'set', img: null },
+  { id: 'hvac-adapter', cat: 'Pro & Specialty', name: 'Super Pro HVAC Service Adapter', price: 12, unit: 'each', img: null },
+  { id: 'tub-tile-caulk', cat: 'Pro & Specialty', name: 'Tub & Tile Caulk (White)', price: 9, unit: 'tube', img: null },
+  { id: 'oil-absorbent', cat: 'Pro & Specialty', name: 'Oil-Dri Premium Absorbent Bag', price: 14, unit: 'bag', img: null },
+  { id: 'mill-rose-abrasive', cat: 'Pro & Specialty', name: 'Mill-Rose Abrasive Cloth Roll (Plumber Grade)', price: 11, unit: 'roll', img: null },
 ];
 
 const CATEGORY_ICONS = {

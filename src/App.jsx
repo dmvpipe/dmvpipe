@@ -56,7 +56,7 @@ const notifyGanaa = async (subject, fields) => {
 // --- CUSTOMER PHOTO UPLOADS ---
 // Photos are compressed in the browser, stored in Firebase Storage, and the
 // links are included in Ganaa's email + the Firestore lead.
-const compressImage = (file, maxDim = 1280, quality = 0.8) => new Promise((resolve) => {
+const compressImage = (file, maxDim = 1000, quality = 0.65) => new Promise((resolve) => {
   const img = new Image();
   const url = URL.createObjectURL(file);
   img.onload = () => {
@@ -73,18 +73,19 @@ const compressImage = (file, maxDim = 1280, quality = 0.8) => new Promise((resol
 
 const uploadLeadPhotos = async (files) => {
   if (!storage || !files || !files.length) return [];
-  const urls = [];
-  for (const f of files.slice(0, 3)) {
+  // Compress + upload all photos in parallel for speed
+  const results = await Promise.all(files.slice(0, 3).map(async (f) => {
     try {
       const blob = await compressImage(f);
       const r = storageRef(storage, `lead-photos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`);
       await uploadBytes(r, blob, { contentType: 'image/jpeg' });
-      urls.push(await getDownloadURL(r));
+      return await getDownloadURL(r);
     } catch (e) {
       console.error('Photo upload failed (continuing without it):', e);
+      return null;
     }
-  }
-  return urls;
+  }));
+  return results.filter(Boolean);
 };
 
 // Reusable "add up to 3 photos" picker with thumbnails

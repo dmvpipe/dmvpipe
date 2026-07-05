@@ -1028,31 +1028,31 @@ function ShopView({ navigate, cart, updateCart }) {
         <p className="text-lg text-stone-600 leading-relaxed">Order the parts with your service and Ganaa brings them to the job — professionally installed, one bill for everything at the end. No store runs, no markup games.</p>
       </div>
 
+      {/* Sticky search + category menu — top-level so it freezes reliably on
+          mobile Safari, full-bleed background so cards never peek around it. */}
+      <div className="sticky top-20 z-30 bg-[#fafaf9] pt-2 pb-3 border-b border-stone-200 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 mb-8">
+        <div className="relative mb-3">
+          <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search materials… e.g. water heater, wax ring, faucet"
+            className="w-full bg-white border border-stone-200 rounded-full pl-11 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm"
+          />
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {categories.map(cat => (
+            <a key={cat} href={`#cat-${cat.replace(/[^a-z]/gi, '-')}`} className="whitespace-nowrap shrink-0 bg-white border border-stone-200 hover:border-blue-400 hover:text-blue-700 text-stone-700 text-xs font-bold px-3.5 py-2 rounded-full transition-colors shadow-sm">
+              {cat}
+            </a>
+          ))}
+        </div>
+      </div>
+
       <div className="grid lg:grid-cols-3 gap-8 items-start">
         {/* Catalog */}
         <div className="lg:col-span-2 space-y-10">
-          {/* Sticky search + category menu (stays visible while scrolling).
-              Negative margins make its background span the full screen width on
-              mobile so cards never peek out beside it. */}
-          <div className="sticky top-20 z-30 bg-[#fafaf9] pt-2 pb-3 border-b border-stone-200 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
-            <div className="relative mb-3">
-              <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
-              <input
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search materials… e.g. water heater, wax ring, faucet"
-                className="w-full bg-white border border-stone-200 rounded-full pl-11 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm"
-              />
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {categories.map(cat => (
-                <a key={cat} href={`#cat-${cat.replace(/[^a-z]/gi, '-')}`} className="whitespace-nowrap shrink-0 bg-white border border-stone-200 hover:border-blue-400 hover:text-blue-700 text-stone-700 text-xs font-bold px-3.5 py-2 rounded-full transition-colors shadow-sm">
-                  {cat}
-                </a>
-              ))}
-            </div>
-          </div>
           {visible.length === 0 && (
             <div className="text-center py-12 bg-white rounded-2xl border border-stone-100">
               <p className="font-bold text-stone-800 mb-2">No items match "{search}"</p>
@@ -1094,7 +1094,7 @@ function ShopView({ navigate, cart, updateCart }) {
         </div>
 
         {/* Cart summary */}
-        <div className="bg-white rounded-2xl border border-stone-100 shadow-lg p-6 lg:sticky lg:top-24">
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-lg p-6 lg:sticky lg:top-48">
           <h2 className="font-extrabold text-stone-900 text-lg mb-4 flex items-center gap-2"><ShoppingCart className="w-5 h-5 text-blue-700"/> Your Materials</h2>
           {cartItems.length === 0 ? (
             <p className="text-sm text-stone-500 leading-relaxed">Nothing added yet. Pick the materials you need — they'll be attached to your service booking.</p>

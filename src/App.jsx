@@ -610,6 +610,12 @@ export default function App() {
         title = `${post.title} | DMVPipe Plumbing Blog`;
         desc = post.excerpt;
       }
+    } else if (formattedView === 'checkout') {
+      title = "Checkout | DMVPipe";
+      desc = "Review your basket and choose how to pay — securely online or when the job is done.";
+    } else if (formattedView === 'admin') {
+      title = "Admin | DMVPipe";
+      desc = "DMVPipe staff dashboard.";
     } else if (formattedView !== 'home') {
       title = "Page Not Found | DMVPipe";
       desc = "The page you are looking for does not exist. Explore our residential plumbing services in Northern Virginia.";
@@ -821,7 +827,7 @@ export default function App() {
 
         {isCityView && <CityView navigate={navigate} city={activeCityName} />}
         {isPostView && <BlogPostView navigate={navigate} slug={currentView.replace('post-', '')} />}
-        {!['home', 'services', 'blog', 'contact', 'account', 'shop'].includes(currentView) && !isCityView && !isPostView && (
+        {!['home', 'services', 'blog', 'contact', 'account', 'shop', 'checkout', 'admin'].includes(currentView) && !isCityView && !isPostView && (
           <NotFoundView navigate={navigate} />
         )}
       </main>

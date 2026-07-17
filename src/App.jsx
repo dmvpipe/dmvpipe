@@ -1471,15 +1471,16 @@ function CheckoutView({ db, user, appId, cart = {}, updateCart, clearCart, navig
       status: 'pending',
       createdAt: serverTimestamp()
     };
+    if (db) {
+      const currentUserId = (user && !user.isAnonymous) ? user.uid : 'simulated_user_123';
+      await addDoc(collection(db, 'artifacts', appId, 'users', currentUserId, 'appointments'), data);
+    }
+    // Only notify Ganaa once the order is actually saved — no emails for failed attempts
     notifyGanaa(`🛒 New shop order — DMVPipe (${paying ? 'PAYING ONLINE' : 'pay on completion'})`, {
       Items: itemsText, Total: `$${fmtPrice(total)}`,
       Name: data.customerName, Phone: form.get('phone'), Address: data.address,
       'Preferred visit': `${data.date} — ${data.time}`, Notes: form.get('notes') || '—'
     });
-    if (db) {
-      const currentUserId = (user && !user.isAnonymous) ? user.uid : 'simulated_user_123';
-      await addDoc(collection(db, 'artifacts', appId, 'users', currentUserId, 'appointments'), data);
-    }
   };
 
   const handleCheckout = async (paying) => {
@@ -2348,17 +2349,16 @@ function SchedulingForm({ db, user, appId, userName, onSuccess, guest = false, n
       status: 'pending',
       createdAt: serverTimestamp()
     };
-    notifyGanaa(`📅 New service booking — DMVPipe`, {
-      Service: data.serviceType, Date: data.date, Time: data.time,
-      Name: customerName, Phone: phone, Address: data.address,
-      Notes: formData.get('notes') || '—',
-      'Situation photos': photoUrls.length ? photoUrls.join('  |  ') : 'None'
-    });
-
     try {
       const currentUserId = (user && !user.isAnonymous) ? user.uid : 'simulated_user_123';
       const appointmentsRef = collection(db, 'artifacts', appId, 'users', currentUserId, 'appointments');
       await addDoc(appointmentsRef, data);
+      notifyGanaa(`📅 New service booking — DMVPipe`, {
+        Service: data.serviceType, Date: data.date, Time: data.time,
+        Name: customerName, Phone: phone, Address: data.address,
+        Notes: formData.get('notes') || '—',
+        'Situation photos': photoUrls.length ? photoUrls.join('  |  ') : 'None'
+      });
 
       setTimeout(() => {
         setSubmitting(false);
@@ -2447,12 +2447,12 @@ function EmergencyForm({ db, user, appId, onClose }) {
     };
 
     try {
-      notifyGanaa('🚨 EMERGENCY plumbing request — DMVPipe', {
-        Priority: 'URGENT', Phone: data.phone, Email: data.email, Address: data.address, Issue: data.issue
-      });
       const currentUserId = (user && !user.isAnonymous) ? user.uid : 'simulated_user_123';
       const appointmentsRef = collection(db, 'artifacts', appId, 'users', currentUserId, 'appointments');
       await addDoc(appointmentsRef, data);
+      notifyGanaa('🚨 EMERGENCY plumbing request — DMVPipe', {
+        Priority: 'URGENT', Phone: data.phone, Email: data.email, Address: data.address, Issue: data.issue
+      });
 
       setStep(2);
       setTimeout(() => {

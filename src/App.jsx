@@ -138,102 +138,279 @@ const SERVICES = [
   { title: "Drain Cleaning", desc: "Clearing tough clogs from sinks, tubs, and main lines.", icon: <Droplet className="w-8 h-8 text-blue-500" /> }
 ];
 
-// --- MATERIALS SHOP ---
-// Prices match Home Depot equivalents — GANAA MUST VERIFY/UPDATE regularly.
-// Images are original illustrations; swap any img for a real photo (e.g. '/products/photos/wh-gas-40.jpg').
+// --- SERVICE PRICE LIST ---
+// Imported from Ganaa's pricebook photos (assets/products list) on Jul 16, 2026.
+// Prices include cents; source spreadsheet: DMVPIPE.com/dmvpipe-new-products.xlsx
+// Real photos live at /products/photos/<id>.jpg (cropped from the pricebook photos).
+const fmtPrice = (n) => Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// Stripe Checkout — items priced server-side in /api/create-checkout-session
+async function startCardPayment(items, customerName, phone) {
+  const resp = await fetch('/api/create-checkout-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items, customerName, phone })
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok || !data.url) throw new Error(data.error || 'Could not start payment');
+  window.location.assign(data.url);
+}
 const PRODUCTS = [
+  // Membership
+  { id: 'membership-yearly', cat: 'Membership', name: 'DMVPipe Home Care Membership — 1 Full Year', price: 249, unit: 'year', img: '/products/items/membership.svg' },
+
+  // Toilets
+  { id: 'tur-115', cat: 'Toilets', name: 'Cast Iron Flange Replacement', price: 1569.4, unit: 'job', img: '/products/items/flange.svg' },
+  { id: 'svc-tur-140', cat: 'Toilets', name: 'Complete Tank Rebuild', price: 489.53, unit: 'job', img: '/products/items/fill-valve.svg' },
+  { id: 'svc-ti-130', cat: 'Toilets', name: 'Install New Toilet Seat Elongated', price: 197.8, unit: 'job', img: '/products/items/toilet-seat.svg' },
+  { id: 'svc-ti-120', cat: 'Toilets', name: 'Install New Toilet Seat Round', price: 185.22, unit: 'job', img: '/products/items/toilet-seat.svg' },
+  { id: 'svc-tur-150', cat: 'Toilets', name: 'Partial Tank Rebuild', price: 307.54, unit: 'job', img: '/products/items/fill-valve.svg' },
+  { id: 'svc-tur-110', cat: 'Toilets', name: 'Pull And Reset Toilet', price: 462.68, unit: 'job', img: '/products/items/toilet.svg' },
+  { id: 'svc-tur-120', cat: 'Toilets', name: 'Replace Flapper', price: 117.99, unit: 'job', img: '/products/items/flapper.svg' },
+  { id: 'tir-115', cat: 'Toilets', name: 'Replace Toilet Basic Gerber Viper Elongated', price: 811.08, unit: 'job', img: '/products/items/toilet.svg' },
+  { id: 'svc-ti-140', cat: 'Toilets', name: 'Replace Toilet Basic Pro Flo Elongated', price: 726.69, unit: 'job', img: '/products/items/toilet.svg' },
+  { id: 'svc-ti-145', cat: 'Toilets', name: 'Replace Toilet Basic Pro Flo Round', price: 684.45, unit: 'job', img: '/products/items/toilet.svg' },
+  { id: 'tir-120', cat: 'Toilets', name: 'Replace Toilet Deluxe Round', price: 1038.2, unit: 'job', img: '/products/items/toilet.svg' },
+  { id: 'svc-ti-115', cat: 'Toilets', name: 'Replace Toilet Deluxe TOTO Elongated', price: 1157.42, unit: 'job', img: '/products/items/toilet.svg' },
+  { id: 'srvc-ti-105', cat: 'Toilets', name: 'Replace Toilet Deluxe TOTO Round', price: 1112.52, unit: 'job', img: '/products/items/toilet.svg' },
+  { id: 'svc-tur-100', cat: 'Toilets', name: 'Replace Toilet Flange', price: 736.88, unit: 'job', img: '/products/items/flange.svg' },
+  { id: 'svc-tur-130', cat: 'Toilets', name: 'Replace Toilet Flush Valve', price: 427.53, unit: 'job', img: '/products/items/fill-valve.svg' },
+  { id: 'tir-125', cat: 'Toilets', name: 'Replace Toilet Premium Gerber Elongated', price: 1140.26, unit: 'job', img: '/products/items/toilet.svg' },
+  { id: 'svc-tur-250', cat: 'Toilets', name: 'Shim And Caulk Toilet', price: 108.6, unit: 'job', img: '/products/items/caulk.svg' },
+  { id: 'svc-tur-230', cat: 'Toilets', name: 'Tank Lever Handle Replacement', price: 134.83, unit: 'job', img: '/products/items/fill-valve.svg' },
+  { id: 'svc-tur-210', cat: 'Toilets', name: 'Toilet Fill Valve/Supply Line Replacement', price: 218.73, unit: 'job', img: '/products/items/fill-valve.svg' },
+  { id: 'svc-tur-200', cat: 'Toilets', name: 'Toilet Supply Line Replacement', price: 169.61, unit: 'job', img: '/products/items/toilet.svg' },
+  { id: 'svc-tur-240', cat: 'Toilets', name: 'Toilet Tank To Bowl Gasket And Hardware Replacement', price: 370.24, unit: 'job', img: '/products/items/fill-valve.svg' },
+
+  // Tub & Shower
+  { id: 'svc-tsf-235', cat: 'Tub & Shower', name: 'Access Panel', price: 364.18, unit: 'job', img: '/products/items/access-panel.svg' },
+  { id: 'svc-tsf-230', cat: 'Tub & Shower', name: 'Add Chrome Remodel Plate', price: 311.36, unit: 'job', img: '/products/items/access-panel.svg' },
+  { id: 'svc-tsf-150', cat: 'Tub & Shower', name: 'Install Brushed Nickel Shower Arm', price: 148.46, unit: 'job', img: '/products/items/showerhead.svg' },
+  { id: 'tsf-112', cat: 'Tub & Shower', name: 'Install Brushed Nickel Shower Faucet (Pro Press)', price: 1284.7, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'svc-tsf-110', cat: 'Tub & Shower', name: 'Install Brushed Nickel Shower Faucet (Sweat)', price: 1284.7, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'svc-tsf-130', cat: 'Tub & Shower', name: 'Install Brushed Nickel Shower Head', price: 215.6, unit: 'job', img: '/products/items/showerhead.svg' },
+  { id: 'svc-tsf-140', cat: 'Tub & Shower', name: 'Install Chrome Shower Arm', price: 135.26, unit: 'job', img: '/products/items/showerhead.svg' },
+  { id: 'tsf-102', cat: 'Tub & Shower', name: 'Install Chrome Shower Faucet (Pro Press)', price: 1009.76, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'svc-tsf-100', cat: 'Tub & Shower', name: 'Install Chrome Shower Faucet (Sweat)', price: 1009.76, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'svc-tsf-120', cat: 'Tub & Shower', name: 'Install Chrome Shower Head', price: 182.59, unit: 'job', img: '/products/items/showerhead.svg' },
+  { id: 'svc-tsf-190', cat: 'Tub & Shower', name: 'Install Leg Tub Two Handle Faucet', price: 850.91, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'svc-tsf-125', cat: 'Tub & Shower', name: 'Install Single Handle Brushed Nickel Tub And Shower Faucet With Head And Spout', price: 1416.02, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'tsf-127', cat: 'Tub & Shower', name: 'Install Single Handle Brushed Nickel Tub And Shower Faucet With Head And Spout', price: 1416.02, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'tsf-202', cat: 'Tub & Shower', name: 'Install Single Handle Tub And Shower Valve (Pro Press)', price: 1141.1, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'svc-tsf-200', cat: 'Tub & Shower', name: 'Install Single Handle Tub And Shower Valve (Sweat)', price: 1141.1, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'tsf-212', cat: 'Tub & Shower', name: 'Install Three Handle Tub And Shower Valve (Remodel Only) (Pro Press)', price: 1339.58, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'svc-tsf-210', cat: 'Tub & Shower', name: 'Install Three Handle Tub And Shower Valve (Remodel Only) (Sweat)', price: 1339.58, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'tsf-222', cat: 'Tub & Shower', name: 'Install Two Handle Tub And Shower Valve 8" Center (Remodel Only) (Pro Press)', price: 1260.33, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'svc-tsf-220', cat: 'Tub & Shower', name: 'Install Two Handle Tub And Shower Valve 8" Center (Remodel Only) (Sweat)', price: 1260.33, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'svc-tsf-182', cat: 'Tub & Shower', name: 'Rebuild Delta Tub/Shower Faucet', price: 484.43, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'svc-tsf-180', cat: 'Tub & Shower', name: 'Rebuild Kohler Tub/Shower Faucet', price: 484.43, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'svc-tsf-181', cat: 'Tub & Shower', name: 'Rebuild Moen Tub/Shower Faucet', price: 484.43, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'svc-td-120', cat: 'Tub & Shower', name: 'Replace Bathtub Trap', price: 554.54, unit: 'job', img: '/products/items/tub-drain.svg' },
+  { id: 'svc-tsf-170', cat: 'Tub & Shower', name: 'Replace Brushed Nickel Tub Spout', price: 222.73, unit: 'job', img: '/products/items/tub-spout.svg' },
+  { id: 'svc-tsf-160', cat: 'Tub & Shower', name: 'Replace Chrome Tub Spout', price: 202.93, unit: 'job', img: '/products/items/tub-spout.svg' },
+  { id: 'svc-td-100', cat: 'Tub & Shower', name: 'Replace Overflow Plate/Trip Lever', price: 231.72, unit: 'job', img: '/products/items/tub-drain.svg' },
+  { id: 'svc-sdr-100', cat: 'Tub & Shower', name: 'Replace Shower Drain', price: 584.92, unit: 'job', img: '/products/items/tub-drain.svg' },
+  { id: 'svc-td-130', cat: 'Tub & Shower', name: 'Replace Tub Shoe', price: 399.84, unit: 'job', img: '/products/items/tub-drain.svg' },
+  { id: 'svc-td-110', cat: 'Tub & Shower', name: 'Replace Tub Waste And Overflow Mechanism', price: 958.12, unit: 'job', img: '/products/items/tub-drain.svg' },
+  { id: 'tsf-215', cat: 'Tub & Shower', name: 'Two Or Three Handle Tub And Shower Repebuild/Repair', price: 777.43, unit: 'job', img: '/products/items/shower-valve.svg' },
+
+  // Kitchen
+  { id: 'ksu-105', cat: 'Kitchen', name: 'Complete Drain Arm Assembly Rebuild', price: 499.47, unit: 'job', img: '/products/items/ptrap.svg' },
+  { id: 'svc-ksf-115', cat: 'Kitchen', name: 'Deck Mount Kitchen Faucet With Side Sprayer (Chrome)', price: 593.63, unit: 'job', img: '/products/items/faucet-pd.svg' },
+  { id: 'svc-ksf-125', cat: 'Kitchen', name: 'Deck Mount Kitchen Faucet With Side Sprayer (Stainless)', price: 618.79, unit: 'job', img: '/products/items/faucet-pd.svg' },
+  { id: 'svc-kapp-140', cat: 'Kitchen', name: 'Hook Up Appliance With New Flex', price: 496.45, unit: 'job', img: '/products/items/gasflex.svg' },
+  { id: 'svc-kapp-165', cat: 'Kitchen', name: 'ISE 1250 pro Garbage disposal', price: 1311.11, unit: 'job', img: '/products/items/disposal.svg' },
+  { id: 'svc-kapp-170', cat: 'Kitchen', name: 'Ice Maker Water Line And Shut Off Install', price: 611.28, unit: 'job', img: '/products/items/supply-line.svg' },
+  { id: 'insinkerator3-4', cat: 'Kitchen', name: 'Insinkerator 3/4hp Garge Disposal', price: 796.89, unit: 'job', img: '/products/items/disposal.svg' },
+  { id: 'svc-ksu-160', cat: 'Kitchen', name: 'Install Aav (Air Admittance Valve)', price: 270.82, unit: 'job', img: '/products/items/ball-valve.svg' },
+  { id: 'svc-kit-130', cat: 'Kitchen', name: 'Install Aav On Kitchen Drain', price: 558.24, unit: 'job', img: '/products/items/ball-valve.svg' },
+  { id: 'svc-kapp-150', cat: 'Kitchen', name: 'Install Badger 5 Garbage Disposal', price: 561.63, unit: 'job', img: '/products/items/disposal.svg' },
+  { id: 'svc-ksf-160', cat: 'Kitchen', name: 'Install Brushed Nickel Faucet With Pull-Down Spray (Moen)', price: 1234.22, unit: 'job', img: '/products/items/faucet-pd.svg' },
+  { id: 'svc-ksf-180', cat: 'Kitchen', name: 'Install Brushed Nickel Faucet With Spray (Moen)', price: 987.7, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-ksf-200', cat: 'Kitchen', name: 'Install Brushed Nickel Faucet Without Spray (Moen)', price: 623.59, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-kapp-100', cat: 'Kitchen', name: 'Install C/S Dishwasher', price: 603.23, unit: 'job', img: '/products/items/dishwasher.svg' },
+  { id: 'svc-ksf-105', cat: 'Kitchen', name: 'Install Chrome 2 Handle Kitchen Faucet', price: 535.13, unit: 'job', img: '/products/items/faucet-kitchen.svg' },
+  { id: 'svc-ksf-150', cat: 'Kitchen', name: 'Install Chrome Faucet With Pull-Down Spray', price: 989.85, unit: 'job', img: '/products/items/faucet-pd.svg' },
+  { id: 'svc-ksf-170', cat: 'Kitchen', name: 'Install Chrome Faucet With Spray', price: 749.48, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-ksf-190', cat: 'Kitchen', name: 'Install Chrome Faucet Without Spray', price: 568.47, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-kapp-160', cat: 'Kitchen', name: 'Install Contractor 1000 power series1HP Garbage Disposal', price: 1003.07, unit: 'job', img: '/products/items/disposal.svg' },
+  { id: 'svc-kapp-190', cat: 'Kitchen', name: 'Install Dishwasher Water Line', price: 333.61, unit: 'job', img: '/products/items/dishwasher.svg' },
+  { id: 'svc-kapp-120', cat: 'Kitchen', name: 'Install Instant Hot Water Dispenser', price: 1613.9, unit: 'job', img: '/products/items/faucet-kitchen.svg' },
+  { id: 'svc-kit-110', cat: 'Kitchen', name: 'Install New Center Outlet Kitchen Waste', price: 301.16, unit: 'job', img: '/products/items/ptrap.svg' },
+  { id: 'svc-kit-120', cat: 'Kitchen', name: 'Install New End Outlet Kitchen Waste', price: 289.96, unit: 'job', img: '/products/items/ptrap.svg' },
+  { id: 'svc-ksi-120', cat: 'Kitchen', name: 'Install Stainless Steel Double Bowl Kitchen Sink', price: 1759.53, unit: 'job', img: '/products/items/sink-ss.svg' },
+  { id: 'svc-ksi-100', cat: 'Kitchen', name: 'Install Stainless Steel Single Bowl Kitchen Sink', price: 1507.97, unit: 'job', img: '/products/items/sink-ss.svg' },
+  { id: 'svc-ksf-185', cat: 'Kitchen', name: 'Moen U Smart Faucet', price: 1472.97, unit: 'job', img: '/products/items/faucet-pd.svg' },
+  { id: 'svc-ksf-142', cat: 'Kitchen', name: 'Repair Delta Kitchen Faucet', price: 350.41, unit: 'job', img: '/products/items/faucet-kitchen.svg' },
+  { id: 'svc-ksf-141', cat: 'Kitchen', name: 'Repair Kohler Kitchen Faucet', price: 350.41, unit: 'job', img: '/products/items/faucet-kitchen.svg' },
+  { id: 'svc-kapp-180', cat: 'Kitchen', name: 'Repair Leak In Ice Maker Water Line', price: 293.99, unit: 'job', img: '/products/items/supply-line.svg' },
+  { id: 'svc-ksf-140', cat: 'Kitchen', name: 'Repair Moen Kitchen Faucet', price: 333.72, unit: 'job', img: '/products/items/faucet-kitchen.svg' },
+  { id: 'svc-kit-100', cat: 'Kitchen', name: 'Replace 1-1/2" P Trap', price: 160.83, unit: 'job', img: '/products/items/ptrap.svg' },
+  { id: 'svc-ksu-120', cat: 'Kitchen', name: 'Replace Basket Strainer', price: 264.09, unit: 'job', img: '/products/items/strainer.svg' },
+  { id: 'svc-ksu-130', cat: 'Kitchen', name: 'Replace Center Outlet Waste', price: 360.5, unit: 'job', img: '/products/items/ptrap.svg' },
+  { id: 'ksu-106', cat: 'Kitchen', name: 'Replace Chrome Kitchen Sink Trap', price: 342.06, unit: 'job', img: '/products/items/sink-ss.svg' },
+  { id: 'svc-ksf-133', cat: 'Kitchen', name: 'Replace Delta Single Handle Kitchen Faucet Cartridge Premium', price: 404.0, unit: 'job', img: '/products/items/cartridge.svg' },
+  { id: 'svc-ksu-142', cat: 'Kitchen', name: 'Replace Dual Outlet Emergency Shutoff Valve', price: 280.87, unit: 'job', img: '/products/items/ball-valve.svg' },
+  { id: 'svc-ksu-140', cat: 'Kitchen', name: 'Replace Emergency Shutoff Valve', price: 233.59, unit: 'job', img: '/products/items/ball-valve.svg' },
+  { id: 'svc-ksu-110', cat: 'Kitchen', name: 'Replace End Outlet Waste', price: 347.92, unit: 'job', img: '/products/items/ptrap.svg' },
+  { id: 'svc-kapp-130', cat: 'Kitchen', name: 'Replace Ice Maker Valve', price: 284.89, unit: 'job', img: '/products/items/supply-line.svg' },
+  { id: 'svc-ksu-150', cat: 'Kitchen', name: 'Replace Kitchen Sink Trap', price: 196.76, unit: 'job', img: '/products/items/sink-ss.svg' },
+  { id: 'svc-ksf-134', cat: 'Kitchen', name: 'Replace Kohler Single Handle Kitchen Faucet Cartridge Premium', price: 404.0, unit: 'job', img: '/products/items/cartridge.svg' },
+  { id: 'svc-ksf-132', cat: 'Kitchen', name: 'Replace Moen Single Handle Kitchen Faucet Cartridge Premium', price: 349.78, unit: 'job', img: '/products/items/cartridge.svg' },
+  { id: 'svc-ksf-110', cat: 'Kitchen', name: 'Replace Pull Down Spray Hose', price: 246.47, unit: 'job', img: '/products/items/faucet-pd.svg' },
+  { id: 'svc-ksf-100', cat: 'Kitchen', name: 'Replace Side Mount Spray Head', price: 179.47, unit: 'job', img: '/products/items/faucet-pd.svg' },
+  { id: 'svc-ksu-100', cat: 'Kitchen', name: 'Replace Supply Line', price: 142.76, unit: 'job', img: '/products/items/supply-line.svg' },
+  { id: 'svc-kapp-145', cat: 'Kitchen', name: 'Unjam Food Waste Disposer', price: 232.04, unit: 'job', img: '/products/items/disposal.svg' },
+  { id: 'svc-ksf-120', cat: 'Kitchen', name: 'repair non standard faucet special order parts', price: 622.61, unit: 'job', img: '/products/items/faucet-bath.svg' },
+
+  // Bathroom Sinks & Faucets
+  { id: 'lf-125', cat: 'Bathroom Sinks & Faucets', name: 'Aerator Repalcement', price: 112.27, unit: 'job', img: '/products/items/aerator.svg' },
+  { id: 'svc-lf-110', cat: 'Bathroom Sinks & Faucets', name: 'Install Brushed Nickel Moen Chateau Single Handle Lavatory Faucet (Moen)', price: 686.3, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-lf-160', cat: 'Bathroom Sinks & Faucets', name: 'Install Brushed Nickel Moen Eva Two Handle Lavatory Faucet 4" Center (Moen)', price: 699.51, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-lf-140', cat: 'Bathroom Sinks & Faucets', name: 'Install Brushed Nickel Widespread Lavatory Faucet 8" - 12" Center', price: 989.87, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-lf-100', cat: 'Bathroom Sinks & Faucets', name: 'Install Chrome Moen Chateau Single Handle Lavatory Faucet', price: 605.11, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-lf-130', cat: 'Bathroom Sinks & Faucets', name: 'Install Chrome Widespread Lavatory Faucet 8" - 12" Center', price: 910.64, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-lsvi-100', cat: 'Bathroom Sinks & Faucets', name: 'Install Drop In Lav Sink', price: 859.87, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-lf-150', cat: 'Bathroom Sinks & Faucets', name: 'Install Moe Eva Chrome Two Handle Lavatory Faucet 4" Center (Moen)', price: 618.32, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-lsvi-110', cat: 'Bathroom Sinks & Faucets', name: 'Install Pedestal Sink', price: 1527.59, unit: 'job', img: '/products/items/pedestal-sink.svg' },
+  { id: 'svc-lf-170', cat: 'Bathroom Sinks & Faucets', name: 'Install Single Basin Lavatory Faucet', price: 518.51, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-lsvi-115', cat: 'Bathroom Sinks & Faucets', name: 'Install Vanity And Sink Top', price: 1896.66, unit: 'job', img: '/products/items/vanity.svg' },
+  { id: 'svc-lf-120', cat: 'Bathroom Sinks & Faucets', name: 'Rebuild Lav Faucet (general repair)', price: 255.96, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'lun-131', cat: 'Bathroom Sinks & Faucets', name: 'Replace Chrome Lavy Trap', price: 342.06, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-lf-123', cat: 'Bathroom Sinks & Faucets', name: 'Replace Delta Single Handle Lav Faucet Cartridge', price: 333.34, unit: 'job', img: '/products/items/cartridge.svg' },
+  { id: 'svc-lun-100', cat: 'Bathroom Sinks & Faucets', name: 'Replace Emergency Shutoff Valve', price: 245.27, unit: 'job', img: '/products/items/ball-valve.svg' },
+  { id: 'svc-lf-124', cat: 'Bathroom Sinks & Faucets', name: 'Replace Kohler Single Handle Lav Faucet Cartridge', price: 333.34, unit: 'job', img: '/products/items/cartridge.svg' },
+  { id: 'svc-lun-110', cat: 'Bathroom Sinks & Faucets', name: 'Replace Lav Drain Pop-Up', price: 315.98, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-lf-122', cat: 'Bathroom Sinks & Faucets', name: 'Replace Moen Single Handle Lav Faucet Cartridge', price: 333.34, unit: 'job', img: '/products/items/cartridge.svg' },
+  { id: 'svc-lun-130', cat: 'Bathroom Sinks & Faucets', name: 'Replace P-Trap', price: 246.22, unit: 'job', img: '/products/items/ptrap.svg' },
+  { id: 'svc-lun-120', cat: 'Bathroom Sinks & Faucets', name: 'Replace Tail Piece', price: 219.81, unit: 'job', img: '/products/items/ptrap.svg' },
+  { id: 'svc-lun-140', cat: 'Bathroom Sinks & Faucets', name: 'Replace Water Supply Line', price: 178.09, unit: 'job', img: '/products/items/supply-line.svg' },
+
+  // Laundry
+  { id: 'svc-wd-140', cat: 'Laundry', name: 'Hammer Arresters', price: 280.59, unit: 'job', img: '/products/items/hammer-arrester.svg' },
+  { id: 'svc-wd-170', cat: 'Laundry', name: 'Hook Up Dryer', price: 489.98, unit: 'job', img: '/products/items/dryer-vent.svg' },
+  { id: 'svc-wd-180', cat: 'Laundry', name: 'Hook Up Washing Machine', price: 429.24, unit: 'job', img: '/products/items/washing-machine.svg' },
+  { id: 'svc-lausf-100', cat: 'Laundry', name: 'Install Bottom Mount Laundry Tray Faucet', price: 579.39, unit: 'job', img: '/products/items/laundry-sink.svg' },
+  { id: 'svc-lausi-110', cat: 'Laundry', name: 'Install Double Bowl Fiberglass Laundry Tray', price: 1870.16, unit: 'job', img: '/products/items/laundry-sink.svg' },
+  { id: 'svc-wd-160', cat: 'Laundry', name: 'Install Emergency Gas Shutoff Valve And Flex Connector', price: 495.77, unit: 'job', img: '/products/items/gas-valve.svg' },
+  { id: 'svc-wd-130', cat: 'Laundry', name: 'Install New Dryer Vent', price: 1036.22, unit: 'job', img: '/products/items/dryer-vent.svg' },
+  { id: 'svc-lausi-100', cat: 'Laundry', name: 'Install Single Bowl Fiberglass Laundry Tray', price: 1553.2, unit: 'job', img: '/products/items/laundry-sink.svg' },
+  { id: 'svc-lausf-110', cat: 'Laundry', name: 'Install Top Mount Laundry Tray Faucet', price: 715.13, unit: 'job', img: '/products/items/laundry-sink.svg' },
+  { id: 'svc-wd-100', cat: 'Laundry', name: 'Install Washing Machine Box', price: 897.94, unit: 'job', img: '/products/items/washing-machine.svg' },
+  { id: 'svc-lausi-120', cat: 'Laundry', name: 'Remove Existing Concrete/Stone Laundry Tray', price: 462.24, unit: 'job', img: '/products/items/laundry-sink.svg' },
+  { id: 'svc-wd-150', cat: 'Laundry', name: 'Replace Boiler Drain Valve', price: 160.14, unit: 'job', img: '/products/items/hosebib.svg' },
+  { id: 'svc-wd-120', cat: 'Laundry', name: 'Replace Dryer Vent', price: 342.86, unit: 'job', img: '/products/items/dryer-vent.svg' },
+  { id: 'svc-wd-110', cat: 'Laundry', name: 'Replace Washing Machine Hoses', price: 170.37, unit: 'job', img: '/products/items/washing-machine.svg' },
+
   // Water Heaters
-  { id: 'wh-gas-40', cat: 'Water Heaters', name: 'Rheem Performance 40 Gal. Natural Gas Tank Water Heater', price: 549, unit: 'each', img: '/products/items/wh-gas.svg' },
-  { id: 'wh-gas-50', cat: 'Water Heaters', name: 'Rheem Performance 50 Gal. Natural Gas Tank Water Heater', price: 629, unit: 'each', img: '/products/items/wh-gas.svg' },
-  { id: 'wh-elec-40', cat: 'Water Heaters', name: 'Rheem Performance 40 Gal. Electric Tank Water Heater', price: 519, unit: 'each', img: '/products/items/wh-elec.svg' },
-  { id: 'wh-elec-50', cat: 'Water Heaters', name: 'Rheem Performance 50 Gal. Electric Tank Water Heater', price: 599, unit: 'each', img: '/products/items/wh-elec.svg' },
-  { id: 'wh-tankless', cat: 'Water Heaters', name: 'Rheem 8.4 GPM Tankless Gas Water Heater', price: 1299, unit: 'each', img: '/products/items/wh-tankless.svg' },
-  { id: 'wh-pan', cat: 'Water Heaters', name: 'Water Heater Drain Pan with PVC Fitting (24 in.)', price: 27, unit: 'each', img: '/products/items/wh-pan.svg' },
-  { id: 'wh-exp-tank', cat: 'Water Heaters', name: 'Thermal Expansion Tank (2 Gal.)', price: 45, unit: 'each', img: '/products/items/exp-tank.svg' },
-  { id: 'tprv-valve', cat: 'Water Heaters', name: 'T&P Relief Valve for Water Heater', price: 18, unit: 'each', img: '/products/items/tprv.svg' },
+  { id: 'svc-wha-165', cat: 'Water Heaters', name: 'Flush Water Heater Tankless', price: 462.24, unit: 'job', img: '/products/items/wh-tankless.svg' },
+  { id: 'whtl-130', cat: 'Water Heaters', name: 'Install Customer Provided Tankless', price: 4044.55, unit: 'job', img: '/products/items/wh-tankless.svg' },
+  { id: 'svc-whtl-110', cat: 'Water Heaters', name: 'Navien 210-S High Efficiency Tankless Water Heater W/ Built In Recirculating Pump', price: 7801.11, unit: 'job', img: '/products/items/wh-tankless.svg' },
+  { id: 'svc-whtl-100', cat: 'Water Heaters', name: 'Navien 240-A High Efficiency Tankless Water Heater W/ Built In Recirculating Pump', price: 8409.55, unit: 'job', img: '/products/items/wh-tankless.svg' },
+  { id: 'whtl-125', cat: 'Water Heaters', name: 'Replace Tankless Water Heater (Direct Repalcement)', price: 6211.29, unit: 'job', img: '/products/items/wh-tankless.svg' },
+  { id: 'svc-whtl-115', cat: 'Water Heaters', name: 'Rinnai RE Non-Condensing Tankless Water Heater', price: 7843.79, unit: 'job', img: '/products/items/wh-tankless.svg' },
+  { id: 'svc-whtl-120', cat: 'Water Heaters', name: 'Rinnai Sensei High Efficiency Tankless Water heater', price: 9188.64, unit: 'job', img: '/products/items/wh-tankless.svg' },
 
-  // Toilets & Parts
-  { id: 'toilet-highline', cat: 'Toilets & Parts', name: 'Kohler Highline 2-Piece Elongated Toilet (1.28 GPF)', price: 239, unit: 'each', img: '/products/items/toilet.svg' },
-  { id: 'toilet-champion', cat: 'Toilets & Parts', name: 'American Standard Champion 4 Toilet (1.6 GPF)', price: 289, unit: 'each', img: '/products/items/toilet.svg' },
-  { id: 'toilet-cadet', cat: 'Toilets & Parts', name: 'American Standard Cadet 3 Round Toilet (Compact)', price: 199, unit: 'each', img: '/products/items/toilet.svg' },
-  { id: 'fill-valve-kit', cat: 'Toilets & Parts', name: 'Fluidmaster Fill Valve & Flapper Complete Repair Kit', price: 22, unit: 'kit', img: '/products/items/fill-valve.svg' },
-  { id: 'toilet-flapper', cat: 'Toilets & Parts', name: 'Korky 2 in. Toilet Flapper (Universal)', price: 9, unit: 'each', img: '/products/items/flapper.svg' },
-  { id: 'trip-lever', cat: 'Toilets & Parts', name: 'Toilet Trip Lever / Flush Handle (Chrome)', price: 12, unit: 'each', img: '/products/items/trip-lever.svg' },
-  { id: 'wax-ring', cat: 'Toilets & Parts', name: 'Wax Ring Kit with Brass Bolts', price: 8, unit: 'kit', img: '/products/items/wax-ring.svg' },
-  { id: 'toilet-seat', cat: 'Toilets & Parts', name: 'Soft-Close Elongated Toilet Seat (White)', price: 32, unit: 'each', img: '/products/items/toilet-seat.svg' },
-  { id: 'toilet-flange', cat: 'Toilets & Parts', name: 'PVC Toilet Flange Repair Kit', price: 15, unit: 'kit', img: '/products/items/flange.svg' },
+  // Water Supply & Valves
+  { id: 'svc-wm-150', cat: 'Water Supply & Valves', name: '1" Main Water Shutoff Valve (Pro Press)', price: 725.8, unit: 'job', img: '/products/items/ball-valve.svg' },
+  { id: 'svc-wm-151', cat: 'Water Supply & Valves', name: '1" Main Water Shutoff Valve (Sweat)', price: 725.8, unit: 'job', img: '/products/items/ball-valve.svg' },
+  { id: 'svc-wm-140', cat: 'Water Supply & Valves', name: '3/4" Main Water Shutoff Valve (Pro Press)', price: 656.25, unit: 'job', img: '/products/items/ball-valve.svg' },
+  { id: 'svc-wm-141', cat: 'Water Supply & Valves', name: '3/4" Main Water Shutoff Valve (Sweat)', price: 656.25, unit: 'job', img: '/products/items/ball-valve.svg' },
+  { id: 'prv-112', cat: 'Water Supply & Valves', name: 'Install 1" Watts 55 B PRV (Pro Press)', price: 792.05, unit: 'job', img: '/products/items/prv.svg' },
+  { id: 'svc-prv-110', cat: 'Water Supply & Valves', name: 'Install 1" Watts 55 B PRV (Sweat)', price: 792.05, unit: 'job', img: '/products/items/prv.svg' },
+  { id: 'prv-102', cat: 'Water Supply & Valves', name: 'Install 3/4 Watts 55-B 3/4" (Pro Press)', price: 724.7, unit: 'job', img: '/products/items/prv.svg' },
+  { id: 'svc-prv-100', cat: 'Water Supply & Valves', name: 'Install 3/4 Watts 55-B 3/4" (Sweat)', price: 724.7, unit: 'job', img: '/products/items/prv.svg' },
+  { id: 'wmf-105', cat: 'Water Supply & Valves', name: 'Install Moen Flo Automatic Main Valve 1"', price: 1583.5, unit: 'job', img: '/products/items/moen-flo.svg' },
+  { id: 'wmf-100', cat: 'Water Supply & Valves', name: 'Install Moen Flo Automatic Main Valve 3/4"', price: 1451.43, unit: 'job', img: '/products/items/moen-flo.svg' },
+  { id: 'wmf-106', cat: 'Water Supply & Valves', name: 'Moen Extension Cable 25\'', price: 38.3, unit: 'job', img: '/products/items/sensor.svg' },
+  { id: 'wmf-109', cat: 'Water Supply & Valves', name: 'Moen Flo 3 Sensors', price: 381.67, unit: 'job', img: '/products/items/moen-flo.svg' },
+  { id: 'wmf-107', cat: 'Water Supply & Valves', name: 'Moen Flo Battery Backup', price: 659.02, unit: 'job', img: '/products/items/moen-flo.svg' },
+  { id: 'wmf-108', cat: 'Water Supply & Valves', name: 'Moen Flo Single Water Sensor', price: 130.75, unit: 'job', img: '/products/items/moen-flo.svg' },
 
-  // Faucets & Sinks
-  { id: 'faucet-kitchen', cat: 'Faucets & Sinks', name: 'Moen Adler Single-Handle Kitchen Faucet with Sprayer', price: 89, unit: 'each', img: '/products/items/faucet-kitchen.svg' },
-  { id: 'faucet-kitchen-pd', cat: 'Faucets & Sinks', name: 'Moen Arbor Pull-Down Kitchen Faucet (Spot Resist)', price: 229, unit: 'each', img: '/products/items/faucet-pd.svg' },
-  { id: 'faucet-bath', cat: 'Faucets & Sinks', name: 'Delta Foundations 4 in. Bathroom Faucet (Chrome)', price: 59, unit: 'each', img: '/products/items/faucet-bath.svg' },
-  { id: 'faucet-bath-brushed', cat: 'Faucets & Sinks', name: 'Moen Genta 4 in. Bathroom Faucet (Brushed Nickel)', price: 119, unit: 'each', img: '/products/items/faucet-bath.svg' },
-  { id: 'sink-kitchen', cat: 'Faucets & Sinks', name: 'Stainless Steel Double-Bowl Drop-In Kitchen Sink (33 in.)', price: 189, unit: 'each', img: '/products/items/sink-ss.svg' },
-  { id: 'shower-valve', cat: 'Faucets & Sinks', name: 'Delta Shower Valve Trim Kit with Cartridge', price: 145, unit: 'kit', img: '/products/items/shower-valve.svg' },
-  { id: 'showerhead', cat: 'Faucets & Sinks', name: 'Moen Engage Magnetix Handheld Shower Head', price: 79, unit: 'each', img: '/products/items/showerhead.svg' },
-  { id: 'faucet-aerator', cat: 'Faucets & Sinks', name: 'Faucet Aerator 1.5 GPM (2-Pack)', price: 6, unit: 'pack', img: '/products/items/aerator.svg' },
+  // Gas Lines
+  { id: 'gprr-115', cat: 'Gas Lines', name: 'Cap Steel Gas line', price: 201.22, unit: 'job', img: '/products/items/gas-pipe.svg' },
+  { id: 'gprr-105genonly', cat: 'Gas Lines', name: 'GENERATOR ONLY - Install Or Replace Norgas Gas Regulators 3/4', price: 571.04, unit: 'job', img: '/products/items/gas-valve.svg' },
+  { id: 'svc-glk-180', cat: 'Gas Lines', name: 'Gas Leak Test With Air', price: 759.4, unit: 'job', img: '/products/items/gas-pipe.svg' },
+  { id: 'svc-glk-170', cat: 'Gas Lines', name: 'Gas Leak Test With Bubbles', price: 297.4, unit: 'job', img: '/products/items/gas-pipe.svg' },
+  { id: 'svc-glk-160', cat: 'Gas Lines', name: 'Gas Snifter Leak Test Electronic', price: 231.13, unit: 'job', img: '/products/items/gas-pipe.svg' },
+  { id: 'svc-gprr-140', cat: 'Gas Lines', name: 'Install 1/2" - 3/4" And 1" Gas Line Each Additional Foot', price: 59.4, unit: 'job', img: '/products/items/gas-pipe.svg' },
+  { id: 'svc-gprr-160', cat: 'Gas Lines', name: 'Install 1/2" - 3/4" Gas Flex Each Additional Foot', price: 59.4, unit: 'job', img: '/products/items/gasflex.svg' },
+  { id: 'svc-gprr-150', cat: 'Gas Lines', name: 'Install 1/2" - 3/4" Gas Flex Up To 10\'', price: 1288.72, unit: 'job', img: '/products/items/gasflex.svg' },
+  { id: 'svc-gprr-130', cat: 'Gas Lines', name: 'Install 1/2" - 3/4" Gas Line Up To 5\'', price: 633.67, unit: 'job', img: '/products/items/gas-pipe.svg' },
+  { id: 'gprr-105', cat: 'Gas Lines', name: 'Install Or Replace Maxitrol Gas Regulators 1/2 or 3/4', price: 562.33, unit: 'job', img: '/products/items/gas-valve.svg' },
+  { id: 'svc-glk-140', cat: 'Gas Lines', name: 'Repair Section Of 1" Piping With Union Access', price: 627.67, unit: 'job', img: '/products/items/gas-pipe.svg' },
+  { id: 'svc-glk-150', cat: 'Gas Lines', name: 'Repair Section Of 1" Piping Without Union Access', price: 693.7, unit: 'job', img: '/products/items/gas-pipe.svg' },
+  { id: 'svc-glk-100', cat: 'Gas Lines', name: 'Repair Section Of 1/2" Piping With Union Access', price: 561.63, unit: 'job', img: '/products/items/gas-pipe.svg' },
+  { id: 'svc-glk-110', cat: 'Gas Lines', name: 'Repair Section Of 1/2" Piping Without Union Access', price: 627.67, unit: 'job', img: '/products/items/gas-pipe.svg' },
+  { id: 'svc-glk-120', cat: 'Gas Lines', name: 'Repair Section Of 3/4" Piping With Union Access', price: 594.64, unit: 'job', img: '/products/items/gas-pipe.svg' },
+  { id: 'svc-glk-130', cat: 'Gas Lines', name: 'Repair Section Of 3/4" Piping Without Union Access', price: 660.68, unit: 'job', img: '/products/items/gas-pipe.svg' },
+  { id: 'svc-gprr-120', cat: 'Gas Lines', name: 'Replace 1" Gas Valve', price: 429.48, unit: 'job', img: '/products/items/gas-valve.svg' },
+  { id: 'svc-gprr-100', cat: 'Gas Lines', name: 'Replace 1/2" Gas Valve', price: 376.66, unit: 'job', img: '/products/items/gas-valve.svg' },
+  { id: 'svc-gprr-110', cat: 'Gas Lines', name: 'Replace 3/4" Gas Valve', price: 403.07, unit: 'job', img: '/products/items/gas-valve.svg' },
 
-  // Drains & Disposals
-  { id: 'disposal-badger5', cat: 'Drains & Disposals', name: 'InSinkErator Badger 5, 1/2 HP Garbage Disposal', price: 109, unit: 'each', img: '/products/items/disposal.svg' },
-  { id: 'disposal-evolution', cat: 'Drains & Disposals', name: 'InSinkErator Evolution Compact 3/4 HP (Quiet)', price: 219, unit: 'each', img: '/products/items/disposal.svg' },
-  { id: 'ptrap-kit', cat: 'Drains & Disposals', name: 'PVC P-Trap Kit 1-1/2 in. with Fittings', price: 9, unit: 'kit', img: '/products/items/ptrap.svg' },
-  { id: 'pop-up', cat: 'Drains & Disposals', name: 'Bathroom Sink Pop-Up Drain Assembly', price: 18, unit: 'each', img: '/products/items/popup.svg' },
-  { id: 'tub-drain', cat: 'Drains & Disposals', name: 'Tub Drain & Overflow Trim Kit (Chrome)', price: 39, unit: 'kit', img: '/products/items/tub-drain.svg' },
-  { id: 'sink-strainer', cat: 'Drains & Disposals', name: 'Kitchen Sink Basket Strainer (Stainless)', price: 14, unit: 'each', img: '/products/items/strainer.svg' },
-  { id: 'hair-snake', cat: 'Drains & Disposals', name: 'Plastic Drain Hair Snake (3-Pack)', price: 6, unit: 'pack', img: '/products/items/hair-snake.svg' },
+  // Backflow Prevention
+  { id: 'svc-bkf-130', cat: 'Backflow Prevention', name: 'Backflow Test', price: 363.19, unit: 'job', img: '/products/items/backflow.svg' },
+  { id: 'bkf-112', cat: 'Backflow Prevention', name: 'Install 1" Backflow Preventer (Pro Press)', price: 1928.17, unit: 'job', img: '/products/items/backflow.svg' },
+  { id: 'svc-bkf-110', cat: 'Backflow Prevention', name: 'Install 1" Backflow Preventer (Sweat)', price: 1928.17, unit: 'job', img: '/products/items/backflow.svg' },
+  { id: 'bkf-102', cat: 'Backflow Prevention', name: 'Install 3/4" Backflow Preventer (Pro Press)', price: 1757.93, unit: 'job', img: '/products/items/backflow.svg' },
+  { id: 'svc-bkf-100', cat: 'Backflow Prevention', name: 'Install 3/4" Backflow Preventer (Sweat)', price: 1757.93, unit: 'job', img: '/products/items/backflow.svg' },
+  { id: 'bkf-115', cat: 'Backflow Prevention', name: 'Replace Fire Non Testable Backflow', price: 812.69, unit: 'job', img: '/products/items/backflow.svg' },
 
-  // Pumps
-  { id: 'sump-13hp', cat: 'Pumps', name: 'Everbilt 1/3 HP Submersible Sump Pump', price: 159, unit: 'each', img: '/products/items/sump.svg' },
-  { id: 'sump-12hp', cat: 'Pumps', name: 'Zoeller M53 1/3 HP Cast Iron Sump Pump (Pro Grade)', price: 219, unit: 'each', img: '/products/items/sump.svg' },
-  { id: 'sump-battery', cat: 'Pumps', name: 'Battery Backup Sump Pump System', price: 449, unit: 'each', img: '/products/items/sump-battery.svg' },
-  { id: 'sewage-ejector', cat: 'Pumps', name: '1/2 HP Sewage Ejector Pump', price: 289, unit: 'each', img: '/products/items/sewage.svg' },
+  // Customer-Supplied Installs
+  { id: 'svc-cs-190', cat: 'Customer-Supplied Installs', name: 'Install C/S Dishwasher', price: 548.38, unit: 'job', img: '/products/items/dishwasher.svg' },
+  { id: 'svc-cs-140', cat: 'Customer-Supplied Installs', name: 'Install C/S Drop In Lav/Laundry Sink', price: 560.7, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-cs-200', cat: 'Customer-Supplied Installs', name: 'Install C/S Garbage Disposal', price: 270.56, unit: 'job', img: '/products/items/disposal.svg' },
+  { id: 'svc-cs-120', cat: 'Customer-Supplied Installs', name: 'Install C/S Kitchen Sink', price: 903.31, unit: 'job', img: '/products/items/sink-ss.svg' },
+  { id: 'svc-cs-110', cat: 'Customer-Supplied Installs', name: 'Install C/S Kitchen/Laundry Faucet', price: 390.2, unit: 'job', img: '/products/items/faucet-kitchen.svg' },
+  { id: 'svc-cs-130', cat: 'Customer-Supplied Installs', name: 'Install C/S Lav/Bar Faucet', price: 390.2, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'svc-cs-150', cat: 'Customer-Supplied Installs', name: 'Install C/S Pedestal Sink', price: 906.15, unit: 'job', img: '/products/items/pedestal-sink.svg' },
+  { id: 'svc-cs-180', cat: 'Customer-Supplied Installs', name: 'Install C/S Sewage Ejector Pump', price: 781.84, unit: 'job', img: '/products/items/sewage.svg' },
+  { id: 'svc-cs-170', cat: 'Customer-Supplied Installs', name: 'Install C/S Sump Pump', price: 450.7, unit: 'job', img: '/products/items/sump.svg' },
+  { id: 'svc-cs-220', cat: 'Customer-Supplied Installs', name: 'Install C/S Toilet', price: 463.64, unit: 'job', img: '/products/items/toilet.svg' },
+  { id: 'svc-cs-230', cat: 'Customer-Supplied Installs', name: 'Install C/S Toilet Seat', price: 72.64, unit: 'job', img: '/products/items/toilet-seat.svg' },
+  { id: 'cs-162', cat: 'Customer-Supplied Installs', name: 'Install C/S Tub/Shower Faucet (Pro Press)', price: 693.44, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'svc-cs-160', cat: 'Customer-Supplied Installs', name: 'Install C/S Tub/Shower Faucet (Sweat)', price: 693.44, unit: 'job', img: '/products/items/shower-valve.svg' },
+  { id: 'svc-cs-240', cat: 'Customer-Supplied Installs', name: 'Install C/S Water Heater (Gas Or Electric) (Pro Press)', price: 1781.61, unit: 'job', img: '/products/items/wh-gas.svg' },
+  { id: 'svc-cs-241', cat: 'Customer-Supplied Installs', name: 'Install C/S Water Heater (Gas Or Electric) (Sweat)', price: 1781.61, unit: 'job', img: '/products/items/wh-gas.svg' },
+  { id: 'cs-212', cat: 'Customer-Supplied Installs', name: 'Install C/S Water Softener (Pro Press)', price: 1442.24, unit: 'job', img: '/products/items/softener.svg' },
+  { id: 'svc-cs-210', cat: 'Customer-Supplied Installs', name: 'Install C/S Water Softener (Sweat)', price: 1442.24, unit: 'job', img: '/products/items/softener.svg' },
+  { id: 'svc-cs-100', cat: 'Customer-Supplied Installs', name: 'Install C/S Widespread Lav Faucet', price: 467.32, unit: 'job', img: '/products/items/faucet-bath.svg' },
+  { id: 'cs-235', cat: 'Customer-Supplied Installs', name: 'Install Customer Provide Double Bowl Laundry Sink', price: 1317.38, unit: 'job', img: '/products/items/laundry-sink.svg' },
+  { id: 'cs-225', cat: 'Customer-Supplied Installs', name: 'Install Customer Provided Single Bowl Laundry Sink', price: 1219.99, unit: 'job', img: '/products/items/laundry-sink.svg' },
 
-  // Pipes & Fittings
-  { id: 'pex-a-34', cat: 'Pipes & Fittings', name: 'PEX-A Tubing 3/4 in. x 100 ft. Roll', price: 89, unit: 'roll', img: '/products/items/pex.svg' },
-  { id: 'pex-a-12', cat: 'Pipes & Fittings', name: 'PEX-A Tubing 1/2 in. x 100 ft. Roll', price: 55, unit: 'roll', img: '/products/items/pex.svg' },
-  { id: 'copper-34', cat: 'Pipes & Fittings', name: 'Copper Pipe Type L 3/4 in. x 10 ft.', price: 42, unit: 'stick', img: '/products/items/copper.svg' },
-  { id: 'sharkbite-fittings', cat: 'Pipes & Fittings', name: 'SharkBite Push-Fit Coupling 3/4 in. (2-Pack)', price: 19, unit: 'pack', img: '/products/items/sharkbite.svg' },
-  { id: 'pvc-dwv', cat: 'Pipes & Fittings', name: 'PVC DWV Pipe 2 in. x 10 ft.', price: 17, unit: 'stick', img: '/products/items/pvc.svg' },
-  { id: 'pipe-insulation', cat: 'Pipes & Fittings', name: 'Foam Pipe Insulation 3/4 in. x 6 ft.', price: 5, unit: 'each', img: '/products/items/insulation.svg' },
-
-  // Valves & Supply Lines
-  { id: 'supply-lines', cat: 'Valves & Supply Lines', name: 'Braided Stainless Faucet Supply Lines (Pair)', price: 12, unit: 'pair', img: '/products/items/supply-line.svg' },
-  { id: 'toilet-supply', cat: 'Valves & Supply Lines', name: 'Braided Stainless Toilet Supply Line', price: 8, unit: 'each', img: '/products/items/supply-line.svg' },
-  { id: 'shutoff-valve', cat: 'Valves & Supply Lines', name: '1/4-Turn Angle Shut-Off Valve 1/2 in.', price: 11, unit: 'each', img: '/products/items/angle-stop.svg' },
-  { id: 'main-shutoff', cat: 'Valves & Supply Lines', name: 'Main Shut-Off Ball Valve 3/4 in. (Full Port)', price: 24, unit: 'each', img: '/products/items/ball-valve.svg' },
-  { id: 'prv-valve', cat: 'Valves & Supply Lines', name: 'Water Pressure Reducing Valve 3/4 in.', price: 89, unit: 'each', img: '/products/items/prv.svg' },
-  { id: 'washer-hoses', cat: 'Valves & Supply Lines', name: 'Washing Machine Hoses, Braided Stainless (Pair)', price: 25, unit: 'pair', img: '/products/items/washer-hose.svg' },
-  { id: 'hose-bibb', cat: 'Valves & Supply Lines', name: 'Frost-Free Outdoor Hose Bibb / Spigot', price: 29, unit: 'each', img: '/products/items/hosebib.svg' },
-  { id: 'gas-connector', cat: 'Valves & Supply Lines', name: 'Gas Appliance Flex Connector 3/4 in. x 36 in.', price: 19, unit: 'each', img: '/products/items/gasflex.svg' },
-
-  // Small Parts & Repair
-  { id: 'teflon-tape', cat: 'Small Parts & Repair', name: 'PTFE Thread Seal Tape (Teflon, 2-Pack)', price: 2, unit: 'pack', img: '/products/items/teflon.svg' },
-  { id: 'plumbers-putty', cat: 'Small Parts & Repair', name: "Plumber's Putty 14 oz.", price: 5, unit: 'tub', img: '/products/items/putty.svg' },
-  { id: 'silicone-caulk', cat: 'Small Parts & Repair', name: 'Kitchen & Bath Silicone Caulk (White)', price: 9, unit: 'tube', img: '/products/items/caulk.svg' },
-
-  // Pro & Specialty (imported from Ganaa's curation list — TEST BATCH.
-  // PRICES ARE ESTIMATES, Ganaa must verify before customers order.)
-  { id: 'drain-tape', cat: 'Pro & Specialty', name: 'Drain & Pipe Repair Tape (Self-Fusing)', price: 8, unit: 'roll', img: null },
-  { id: 'torch-regulator', cat: 'Pro & Specialty', name: 'TurboTorch Acetylene Regulator', price: 95, unit: 'each', img: null },
-  { id: 'acetylene-refill', cat: 'Pro & Specialty', name: 'Acetylene B-Tank Refill / Exchange', price: 75, unit: 'each', img: null },
-  { id: 'acid-neutralizer', cat: 'Pro & Specialty', name: 'RectorSeal Condensate Acid Neutralizer Kit', price: 45, unit: 'kit', img: null },
-  { id: 'acid-test-kit', cat: 'Pro & Specialty', name: 'Refrigeration Oil Acid Test Kit', price: 22, unit: 'kit', img: null },
-  { id: 'caulk-adapter', cat: 'Pro & Specialty', name: 'Caulk Gun Adapter / Nozzle Set', price: 6, unit: 'set', img: null },
-  { id: 'hvac-adapter', cat: 'Pro & Specialty', name: 'Super Pro HVAC Service Adapter', price: 12, unit: 'each', img: null },
-  { id: 'tub-tile-caulk', cat: 'Pro & Specialty', name: 'Tub & Tile Caulk (White)', price: 9, unit: 'tube', img: null },
-  { id: 'oil-absorbent', cat: 'Pro & Specialty', name: 'Oil-Dri Premium Absorbent Bag', price: 14, unit: 'bag', img: null },
-  { id: 'mill-rose-abrasive', cat: 'Pro & Specialty', name: 'Mill-Rose Abrasive Cloth Roll (Plumber Grade)', price: 11, unit: 'roll', img: null },
+  // Commercial
+  { id: 'cobran-100', cat: 'Commercial', name: 'Cable Commercial Branch Lines', price: 623.66, unit: 'job', img: '/products/items/drain-machine.svg' },
+  { id: 'comain-105', cat: 'Commercial', name: 'Clear Main Stoppage Through Existing Clean Out', price: 953.83, unit: 'job', img: '/products/items/drain-machine.svg' },
+  { id: 'comain-100', cat: 'Commercial', name: 'Clear Main Stoppage Through Toilet Access', price: 1210.63, unit: 'job', img: '/products/items/drain-machine.svg' },
+  { id: 'commercial-diagnosis', cat: 'Commercial', name: 'Commercial Diagnosis', price: 403.55, unit: 'job', img: '/products/items/diagnose.svg' },
+  { id: 'svc-tustp-120', cat: 'Commercial', name: 'Pull And Clear Urinal', price: 843.78, unit: 'job', img: '/products/items/urinal.svg' },
+  { id: 'svc-tur-170', cat: 'Commercial', name: 'Rebuild Flushometer Valve', price: 403.48, unit: 'job', img: '/products/items/flushometer.svg' },
+  { id: 'svc-tur-190', cat: 'Commercial', name: 'Rebuild Urinal Flush Valve', price: 403.48, unit: 'job', img: '/products/items/urinal.svg' },
+  { id: 'svc-tur-160', cat: 'Commercial', name: 'Replace Flushometer Valve', price: 943.54, unit: 'job', img: '/products/items/flushometer.svg' },
+  { id: 'svc-tur-180', cat: 'Commercial', name: 'Replace Urinal Flush Valve', price: 943.54, unit: 'job', img: '/products/items/urinal.svg' },
+  { id: 'tur-161', cat: 'Commercial', name: 'Sloan toilet or urinal spud Replacement', price: 618.16, unit: 'job', img: '/products/items/urinal.svg' },
+  { id: 'commfau-105', cat: 'Commercial', name: 'T&S Lavy Faucet Replacement', price: 819.79, unit: 'job', img: '/products/items/faucet-bath.svg' },
 ];
 
+
+
+
+
 const CATEGORY_ICONS = {
+  'Membership': <ShieldCheck className="w-8 h-8" />,
+  'Toilets': <Home className="w-8 h-8" />,
+  'Tub & Shower': <Droplet className="w-8 h-8" />,
+  'Kitchen': <Droplet className="w-8 h-8" />,
+  'Bathroom Sinks & Faucets': <Droplet className="w-8 h-8" />,
+  'Laundry': <Home className="w-8 h-8" />,
   'Water Heaters': <Wrench className="w-8 h-8" />,
-  'Toilets & Parts': <Home className="w-8 h-8" />,
-  'Faucets & Sinks': <Droplet className="w-8 h-8" />,
-  'Drains & Disposals': <Droplet className="w-8 h-8" />,
-  'Pumps': <Wrench className="w-8 h-8" />,
-  'Pipes & Fittings': <Wrench className="w-8 h-8" />,
-  'Valves & Supply Lines': <Wrench className="w-8 h-8" />,
-};
+  'Water Supply & Valves': <Wrench className="w-8 h-8" />,
+  'Gas Lines': <Wrench className="w-8 h-8" />,
+  'Backflow Prevention': <Wrench className="w-8 h-8" />,
+  'Customer-Supplied Installs': <Wrench className="w-8 h-8" />,
+  'Commercial': <Home className="w-8 h-8" />,
+  'Specials': <CheckCircle className="w-8 h-8" />,
+}
 
 const BLOG_POSTS = [
   { 
@@ -320,6 +497,9 @@ export default function App() {
   });
 
   const [user, setUser] = useState(null);
+  const [payBanner, setPayBanner] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get('payment'); } catch { return null; }
+  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
@@ -352,7 +532,7 @@ export default function App() {
       desc = "Expert leak detection, water heater repair, pipe replacement, and drain cleaning strictly for residential homes in Northern VA.";
     } else if (formattedView === 'contact') {
       title = "Contact DMVPipe | 24/7 Emergency Plumbing in DMV";
-      desc = "Call 703-655-6351 for fast, reliable residential plumbing. Serving Arlington, Alexandria, Fairfax, and 17 more cities.";
+      desc = "Call 703-300-3622 for fast, reliable residential plumbing. Serving Arlington, Alexandria, Fairfax, and 17 more cities.";
     } else if (formattedView === 'blog') {
       title = "Plumbing Tips & Blog | DMVPipe";
       desc = "Learn how to maintain your home's plumbing, prevent frozen pipes, and spot water heater issues early.";
@@ -366,7 +546,7 @@ export default function App() {
       const cityIndex = VA_CITIES.findIndex(c => c.toLowerCase().replace(/\s+/g, '-') === formattedView);
       const cityName = VA_CITIES[cityIndex];
       title = `Plumber in ${cityName}, VA | DMVPipe Residential Services`;
-      desc = `Looking for a trusted residential plumber in ${cityName}, Virginia? DMVPipe brings 15+ years of master plumbing experience directly to your home. Call 703-655-6351.`;
+      desc = `Looking for a trusted residential plumber in ${cityName}, Virginia? DMVPipe brings 15+ years of master plumbing experience directly to your home. Call 703-300-3622.`;
     } else if (formattedView.startsWith('post-')) {
       const slug = formattedView.replace('post-', '');
       const post = BLOG_POSTS.find(p => p.slug === slug);
@@ -455,6 +635,18 @@ export default function App() {
   return (
     <HelmetProvider>
       <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col relative">
+      {payBanner === 'success' && (
+        <div className="bg-green-600 text-white text-sm font-bold px-4 py-3 flex items-center justify-center gap-3">
+          <CheckCircle className="w-4 h-4 shrink-0"/> Payment received — thank you! Ganaa will confirm your appointment shortly.
+          <button onClick={() => setPayBanner(null)} aria-label="Dismiss" className="ml-2 opacity-80 hover:opacity-100"><X className="w-4 h-4"/></button>
+        </div>
+      )}
+      {payBanner === 'cancelled' && (
+        <div className="bg-stone-700 text-white text-sm font-bold px-4 py-3 flex items-center justify-center gap-3">
+          Payment cancelled — no charge was made. You can pay on completion instead.
+          <button onClick={() => setPayBanner(null)} aria-label="Dismiss" className="ml-2 opacity-80 hover:opacity-100"><X className="w-4 h-4"/></button>
+        </div>
+      )}
       <header className="bg-white shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
@@ -480,10 +672,10 @@ export default function App() {
 
               <div className="pl-5 border-l border-stone-200 flex items-center gap-3">
                 <a
-                  href="tel:7036556351"
+                  href="tel:7033003622"
                   className="flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-stone-900 px-5 py-2.5 rounded-full font-bold transition-colors shadow-sm"
                 >
-                  <Phone className="w-4 h-4" /> 703-655-6351
+                  <Phone className="w-4 h-4" /> 703-300-3622
                 </a>
                 <button
                   onClick={() => navigate('account')}
@@ -501,7 +693,7 @@ export default function App() {
 
             {/* Mobile: call button + menu */}
             <div className="md:hidden flex items-center gap-2">
-              <a href="tel:7036556351" className="bg-amber-400 text-stone-900 p-2.5 rounded-full shadow-sm" aria-label="Call DMVPipe">
+              <a href="tel:7033003622" className="bg-amber-400 text-stone-900 p-2.5 rounded-full shadow-sm" aria-label="Call DMVPipe">
                 <Phone className="w-5 h-5" />
               </a>
               <button className="p-2" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
@@ -523,8 +715,8 @@ export default function App() {
             <button onClick={() => navigate('blog')} className="block w-full text-left py-3 px-4 rounded-lg hover:bg-slate-50 font-medium text-slate-700">Blog</button>
             <button onClick={() => navigate('contact')} className="block w-full text-left py-3 px-4 rounded-lg hover:bg-slate-50 font-medium text-slate-700">Contact</button>
             <div className="pt-2 space-y-2">
-              <a href="tel:7036556351" className="flex items-center justify-center gap-2 w-full bg-amber-400 text-stone-900 py-3 rounded-lg font-bold">
-                <Phone className="w-5 h-5" /> Call 703-655-6351
+              <a href="tel:7033003622" className="flex items-center justify-center gap-2 w-full bg-amber-400 text-stone-900 py-3 rounded-lg font-bold">
+                <Phone className="w-5 h-5" /> Call 703-300-3622
               </a>
               <button onClick={() => navigate('account')} className="flex items-center justify-center gap-2 w-full bg-blue-900 text-white py-3 rounded-lg font-semibold">
                 <User className="w-5 h-5" /> {user && !user.isAnonymous ? "My Dashboard" : "Book Online"}
@@ -579,7 +771,7 @@ export default function App() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-3">
                 <Phone className="w-5 h-5 text-amber-400 shrink-0" />
-                <span><a href="tel:7036556351" className="hover:text-white font-semibold">703-655-6351</a><br/><span className="text-xs text-blue-200/60">24/7 Emergency Available</span></span>
+                <span><a href="tel:7033003622" className="hover:text-white font-semibold">703-300-3622</a><br/><span className="text-xs text-blue-200/60">24/7 Emergency Available</span></span>
               </li>
               <li className="flex items-start gap-3">
                 <Mail className="w-5 h-5 text-blue-500 shrink-0" />
@@ -682,7 +874,7 @@ function HomeView({ navigate }) {
             "name": "DMVPipe",
             "description": "Family-owned residential plumbing services in Northern Virginia",
             "url": "https://dmvpipe.com",
-            "telephone": "703-655-6351",
+            "telephone": "703-300-3622",
             "address": {
               "@type": "PostalAddress",
               "addressRegion": "VA",
@@ -712,7 +904,7 @@ function HomeView({ navigate }) {
               When you call DMVPipe, you talk to Ganaa — the master plumber who shows up at your door. 15+ years of experience, honest quotes, and homes-only focus.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <a href="tel:7036556351" className="bg-amber-400 hover:bg-amber-300 text-stone-900 px-8 py-4 rounded-full font-extrabold text-lg transition-all shadow-lg shadow-amber-400/30 flex items-center justify-center gap-2">
+              <a href="tel:7033003622" className="bg-amber-400 hover:bg-amber-300 text-stone-900 px-8 py-4 rounded-full font-extrabold text-lg transition-all shadow-lg shadow-amber-400/30 flex items-center justify-center gap-2">
                 <Phone className="w-5 h-5" /> Call Ganaa Now
               </a>
               <button onClick={() => navigate('account')} className="bg-blue-900 hover:bg-blue-800 text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
@@ -741,7 +933,7 @@ function HomeView({ navigate }) {
                   <p className="font-bold text-stone-900 text-sm">15+ years fixing NoVA homes</p>
                   <p className="text-xs text-stone-500 mt-0.5">Direct line, no dispatchers</p>
                 </div>
-                <a href="tel:7036556351" className="bg-blue-50 text-blue-800 p-3 rounded-full hover:bg-blue-100 transition-colors" aria-label="Call now">
+                <a href="tel:7033003622" className="bg-blue-50 text-blue-800 p-3 rounded-full hover:bg-blue-100 transition-colors" aria-label="Call now">
                   <Phone className="w-5 h-5" />
                 </a>
               </div>
@@ -881,8 +1073,8 @@ function HomeView({ navigate }) {
           <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-4">Plumbing problem? Talk to Ganaa today.</h2>
           <p className="text-blue-100/90 text-lg mb-8">Honest advice on the phone, fair quotes at your door, and emergency help when you need it most.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="tel:7036556351" className="bg-amber-400 hover:bg-amber-300 text-stone-900 px-8 py-4 rounded-full font-extrabold text-lg transition-all shadow-lg flex items-center justify-center gap-2">
-              <Phone className="w-5 h-5" /> 703-655-6351
+            <a href="tel:7033003622" className="bg-amber-400 hover:bg-amber-300 text-stone-900 px-8 py-4 rounded-full font-extrabold text-lg transition-all shadow-lg flex items-center justify-center gap-2">
+              <Phone className="w-5 h-5" /> 703-300-3622
             </a>
             <button onClick={() => navigate('contact')} className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-8 py-4 rounded-full font-bold text-lg transition-all flex items-center justify-center gap-2">
               <Send className="w-5 h-5" /> Send a Message
@@ -919,7 +1111,7 @@ function CityView({ navigate, city }) {
             "@type": "Plumber",
             "name": "DMVPipe - Ganaa's Plumbing",
             "url": `https://dmvpipe.com/${citySlug}`,
-            "telephone": "+1-703-655-6351",
+            "telephone": "+1-703-300-3622",
             "image": "https://dmvpipe.com/logo.png",
             "priceRange": "$$",
             "areaServed": { "@type": "City", "name": `${city}, VA` },
@@ -949,7 +1141,7 @@ function CityView({ navigate, city }) {
             Ganaa provides master-level plumbing services strictly for residential homes in {city} and the greater DMV area. Leak repairs, water heaters, and drain cleaning done right.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <a href="tel:7036556351" className="bg-amber-400 hover:bg-amber-300 text-stone-900 px-8 py-4 rounded-full font-extrabold text-lg transition-all shadow-lg shadow-amber-400/30 flex items-center justify-center gap-2">
+            <a href="tel:7033003622" className="bg-amber-400 hover:bg-amber-300 text-stone-900 px-8 py-4 rounded-full font-extrabold text-lg transition-all shadow-lg shadow-amber-400/30 flex items-center justify-center gap-2">
               <Phone className="w-5 h-5" /> Call Ganaa Now
             </a>
             <button onClick={() => navigate('account')} className="bg-blue-900 hover:bg-blue-800 text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
@@ -1014,7 +1206,7 @@ function ShopView({ navigate, cart, updateCart }) {
                 <ShoppingCart className="w-6 h-6" />
                 <span className="absolute -top-2 -right-2 bg-amber-400 text-stone-900 text-[10px] font-extrabold rounded-full w-5 h-5 flex items-center justify-center">{cartItems.reduce((a, p) => a + cart[p.id], 0)}</span>
               </span>
-              ${total} in materials
+              ${fmtPrice(total)} in materials
             </span>
             <span className="bg-amber-400 text-stone-900 font-extrabold text-sm px-4 py-2 rounded-full">Book Now &rarr;</span>
           </button>
@@ -1022,10 +1214,42 @@ function ShopView({ navigate, cart, updateCart }) {
       )}
       <div className="text-center max-w-3xl mx-auto mb-12">
         <span className="inline-flex items-center gap-2 bg-blue-50 text-blue-800 px-4 py-1.5 rounded-full text-sm font-bold mb-5 border border-blue-100">
-          <ShoppingCart className="w-4 h-4" /> Materials Shop
+          <ShoppingCart className="w-4 h-4" /> Services & Pricing
         </span>
-        <h1 className="text-4xl font-extrabold text-stone-900 mb-4">Quality materials, Home Depot prices</h1>
-        <p className="text-lg text-stone-600 leading-relaxed">Order the parts with your service and Ganaa brings them to the job — professionally installed, one bill for everything at the end. No store runs, no markup games.</p>
+        <h1 className="text-4xl font-extrabold text-stone-900 mb-4">Up-front pricing. No surprises.</h1>
+        <p className="text-lg text-stone-600 leading-relaxed">Every job priced before we start — add services to your booking and Ganaa arrives ready to work. One clear bill at the end, pay on completion.</p>
+      </div>
+
+      {/* Membership banner */}
+      <div className="max-w-4xl mx-auto mb-12 bg-blue-900 rounded-3xl overflow-hidden shadow-xl shadow-blue-900/20">
+        <div className="p-6 sm:p-8 md:flex md:items-center md:gap-8">
+          <div className="flex-1">
+            <span className="inline-flex items-center gap-2 bg-amber-400 text-stone-900 px-3 py-1 rounded-full text-xs font-extrabold mb-3">
+              <ShieldCheck className="w-3.5 h-3.5" /> BEST VALUE
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2">Home Care Membership</h2>
+            <p className="text-blue-100/90 text-sm mb-4">Protect your home's plumbing all year for less than the cost of one service call.</p>
+            <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-blue-50 mb-5">
+              <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0"/> Free water heater inspection every 3 months</li>
+              <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0"/> $0 dispatch fee — evenings &amp; weekends included</li>
+              <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0"/> Priority scheduling — members go first</li>
+              <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0"/> Free plumbing consultations</li>
+              <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0"/> Free filter change once a year</li>
+              <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0"/> 10% off all repairs &amp; installations</li>
+            </ul>
+          </div>
+          <div className="md:text-center shrink-0">
+            <p className="text-blue-200 text-xs font-bold uppercase tracking-wide">Only</p>
+            <p className="text-white font-extrabold text-4xl mb-1">$249<span className="text-base font-bold text-blue-200">/year</span></p>
+            {cart['membership-yearly'] ? (
+              <span className="inline-flex items-center gap-2 bg-white/10 text-white text-sm font-bold px-5 py-2.5 rounded-full border border-white/20"><CheckCircle className="w-4 h-4 text-amber-400"/> In your cart</span>
+            ) : (
+              <button onClick={() => updateCart('membership-yearly', 1)} className="bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-stone-900 font-extrabold px-7 py-3 rounded-full transition-colors shadow-lg">
+                Become a Member
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Sticky search + category menu — top-level so it freezes reliably on
@@ -1070,7 +1294,7 @@ function ShopView({ navigate, cart, updateCart }) {
                     </div>
                     <div className="flex flex-col grow min-w-0">
                       <h3 className="font-bold text-stone-900 text-sm leading-snug">{p.name}</h3>
-                      <p className="font-extrabold text-blue-800 text-xl sm:text-lg mt-1">${p.price}<span className="text-xs text-stone-400 font-semibold"> /{p.unit}</span></p>
+                      <p className="font-extrabold text-blue-800 text-xl sm:text-lg mt-1">${fmtPrice(p.price)}<span className="text-xs text-stone-400 font-semibold"> /{p.unit}</span></p>
                       <div className="mt-auto pt-2">
                         {cart[p.id] ? (
                           <div className="inline-flex items-center gap-1 bg-blue-50 border border-blue-100 rounded-full px-1.5 py-1">
@@ -1105,17 +1329,17 @@ function ShopView({ navigate, cart, updateCart }) {
                   <li key={p.id} className="py-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-stone-800 truncate">{p.name}</p>
-                      <p className="text-xs text-stone-400">${p.price} × {cart[p.id]}</p>
+                      <p className="text-xs text-stone-400">${fmtPrice(p.price)} × {cart[p.id]}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <p className="font-bold text-stone-900 text-sm">${p.price * cart[p.id]}</p>
+                      <p className="font-bold text-stone-900 text-sm">${fmtPrice(p.price * cart[p.id])}</p>
                       <button onClick={() => updateCart(p.id, -cart[p.id])} aria-label="Remove item" className="text-stone-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4"/></button>
                     </div>
                   </li>
                 ))}
               </ul>
               <div className="flex justify-between font-extrabold text-stone-900 text-lg border-t border-stone-200 pt-4 mb-5">
-                <span>Materials total</span><span>${total}</span>
+                <span>Materials total</span><span>${fmtPrice(total)}</span>
               </div>
               <button onClick={() => navigate('account')} className="w-full bg-amber-400 hover:bg-amber-300 text-stone-900 font-extrabold py-3.5 rounded-full transition-colors flex items-center justify-center gap-2">
                 <Calendar className="w-5 h-5"/> Book Service with Materials
@@ -1154,8 +1378,8 @@ function ServicesView({ navigate }) {
           <h3 className="text-2xl md:text-3xl font-extrabold mb-4">Have a unique plumbing issue?</h3>
           <p className="text-blue-100 mb-8 max-w-2xl mx-auto">If it involves pipes, water, or gas lines in a residential home, Ganaa has seen it and fixed it. Call or message us for a custom assessment.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="tel:7036556351" className="bg-amber-400 hover:bg-amber-300 text-stone-900 px-8 py-3 rounded-full font-extrabold shadow-lg transition-colors flex items-center justify-center gap-2">
-              <Phone className="w-5 h-5" /> 703-655-6351
+            <a href="tel:7033003622" className="bg-amber-400 hover:bg-amber-300 text-stone-900 px-8 py-3 rounded-full font-extrabold shadow-lg transition-colors flex items-center justify-center gap-2">
+              <Phone className="w-5 h-5" /> 703-300-3622
             </a>
             <button onClick={() => navigate('contact')} className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-8 py-3 rounded-full font-bold shadow-lg transition-colors">
               Contact Us Now
@@ -1308,7 +1532,7 @@ function ContactView({ user }) {
           <div className="space-y-8 grow">
             <div>
               <h4 className="text-amber-300 font-semibold mb-2 flex items-center gap-2"><Phone className="w-5 h-5"/> Phone</h4>
-              <p className="text-lg"><a href="tel:7036556351" className="font-bold hover:underline">703-655-6351</a></p>
+              <p className="text-lg"><a href="tel:7033003622" className="font-bold hover:underline">703-300-3622</a></p>
               <p className="text-sm text-blue-200/70 mt-1">Available for emergency calls</p>
             </div>
             <div>
@@ -1335,7 +1559,7 @@ function ContactView({ user }) {
           )}
           {status === 'error' && (
             <div className="mb-6 bg-red-50 text-red-700 p-4 rounded-lg flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5" /> Something went wrong. Please call us directly at 703-655-6351.
+              <AlertTriangle className="w-5 h-5" /> Something went wrong. Please call us directly at 703-300-3622.
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -1459,7 +1683,7 @@ function AccountView({ user, db, appId, cart = {}, clearCart, navigate }) {
             </div>
             <h2 className="text-3xl font-extrabold text-stone-900 mb-3">Request received!</h2>
             <p className="text-stone-600 mb-8 leading-relaxed">Ganaa personally reviews every booking and will call or text you shortly to confirm — usually within the hour during the day.</p>
-            <a href="tel:7036556351" className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-stone-900 px-8 py-3 rounded-full font-extrabold transition-colors">
+            <a href="tel:7033003622" className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-stone-900 px-8 py-3 rounded-full font-extrabold transition-colors">
               <Phone className="w-5 h-5" /> Need it faster? Call now
             </a>
           </div>
@@ -1619,6 +1843,9 @@ function AccountView({ user, db, appId, cart = {}, clearCart, navigate }) {
 
 function SchedulingForm({ db, user, appId, userName, onSuccess, guest = false, cart = {}, clearCart, navigate }) {
   const [submitting, setSubmitting] = useState(false);
+  const [payOffer, setPayOffer] = useState(null); // { items, total, customerName, phone } after booking w/ cart
+  const [payBusy, setPayBusy] = useState(false);
+  const [payError, setPayError] = useState(null);
   const [photos, setPhotos] = useState([]);
   const cartItems = PRODUCTS.filter(p => cart[p.id]);
   const materialsTotal = cartItems.reduce((sum, p) => sum + p.price * cart[p.id], 0);
@@ -1633,7 +1860,7 @@ function SchedulingForm({ db, user, appId, userName, onSuccess, guest = false, c
     const phone = formData.get('phone') || (user && user.phoneNumber) || 'Not provided';
     const photoUrls = await uploadLeadPhotos(photos);
     const materialsText = cartItems.length
-      ? cartItems.map(p => `${p.name} × ${cart[p.id]} ($${p.price * cart[p.id]})`).join('; ') + ` — Materials total: $${materialsTotal}`
+      ? cartItems.map(p => `${p.name} × ${cart[p.id]} ($${fmtPrice(p.price * cart[p.id])})`).join('; ') + ` — Materials total: $${fmtPrice(materialsTotal)}`
       : '';
     const data = {
       photos: photoUrls,
@@ -1661,16 +1888,50 @@ function SchedulingForm({ db, user, appId, userName, onSuccess, guest = false, c
       const appointmentsRef = collection(db, 'artifacts', appId, 'users', currentUserId, 'appointments');
       await addDoc(appointmentsRef, data);
 
+      const offer = cartItems.length ? {
+        items: cartItems.map(p => ({ id: p.id, qty: cart[p.id] })),
+        total: materialsTotal, customerName, phone
+      } : null;
       if (cartItems.length && clearCart) clearCart();
       setTimeout(() => {
         setSubmitting(false);
-        onSuccess();
+        if (offer) setPayOffer(offer); else onSuccess();
       }, 800);
     } catch (err) {
       console.error(err);
       setSubmitting(false);
     }
   };
+
+  if (payOffer) {
+    return (
+      <div className="text-center py-4 animate-in fade-in duration-300">
+        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="w-8 h-8" />
+        </div>
+        <h3 className="text-2xl font-extrabold text-stone-900 mb-2">Booking received!</h3>
+        <p className="text-stone-600 mb-6">How would you like to pay for the services (${fmtPrice(payOffer.total)})?</p>
+        {payError && <p className="text-sm text-red-600 font-semibold mb-3">{payError} — you can also simply pay on completion.</p>}
+        <div className="space-y-3 max-w-sm mx-auto">
+          <button
+            disabled={payBusy}
+            onClick={async () => {
+              setPayBusy(true); setPayError(null);
+              try { await startCardPayment(payOffer.items, payOffer.customerName, payOffer.phone); }
+              catch (e) { setPayError(e.message); setPayBusy(false); }
+            }}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-colors flex justify-center items-center gap-2"
+          >
+            {payBusy ? 'Opening secure checkout…' : <>Pay ${fmtPrice(payOffer.total)} by card now</>}
+          </button>
+          <button onClick={() => onSuccess()} className="w-full bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold py-3.5 rounded-xl transition-colors">
+            Pay on completion (card, cash, or Zelle)
+          </button>
+        </div>
+        <p className="text-xs text-stone-400 mt-4">Card payments are processed securely by Stripe — we never see your card number.</p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -1732,18 +1993,18 @@ function SchedulingForm({ db, user, appId, userName, onSuccess, guest = false, c
             {cartItems.map(p => (
               <li key={p.id} className="flex justify-between gap-3">
                 <span className="truncate">{p.name} × {cart[p.id]}</span>
-                <span className="font-semibold shrink-0">${p.price * cart[p.id]}</span>
+                <span className="font-semibold shrink-0">${fmtPrice(p.price * cart[p.id])}</span>
               </li>
             ))}
           </ul>
           <p className="flex justify-between font-extrabold text-blue-950 text-sm border-t border-blue-200 pt-2 mt-2">
-            <span>Materials total</span><span>${materialsTotal}</span>
+            <span>Materials total</span><span>${fmtPrice(materialsTotal)}</span>
           </p>
           <p className="text-xs text-blue-800/60 mt-2">One bill at the end — service + materials together (card, cash, or Zelle).</p>
         </div>
       )}
       <button disabled={submitting} type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-colors flex justify-center items-center gap-2 text-lg mt-4">
-        {submitting ? 'Processing Request...' : <><CheckCircle className="w-5 h-5"/> {cartItems.length ? `Confirm Booking + Materials ($${materialsTotal})` : 'Confirm Booking'}</>}
+        {submitting ? 'Processing Request...' : <><CheckCircle className="w-5 h-5"/> {cartItems.length ? `Confirm Booking + Materials ($${fmtPrice(materialsTotal)})` : 'Confirm Booking'}</>}
       </button>
       <p className="text-sm text-center text-slate-500 mt-2 font-medium">Ganaa personally confirms every request — no automated dispatch.</p>
     </form>
@@ -1886,7 +2147,7 @@ function ChatbotUI({ user, db, appId }) {
       setLeadPhotoUrls(prev => [...prev, ...urls].slice(0, 3));
       setMessages(prev => [...prev, { text: urls.length === 1 ? "📷 Got the photo — Ganaa will review it before the visit. That really helps him bring the right parts!" : `📷 Got ${urls.length} photos — Ganaa will review them before the visit. That really helps him bring the right parts!`, isBot: true }]);
     } else {
-      setMessages(prev => [...prev, { text: "Hmm — the photo didn't upload. No problem: you can also text it directly to Ganaa at 703-655-6351 after booking.", isBot: true }]);
+      setMessages(prev => [...prev, { text: "Hmm — the photo didn't upload. No problem: you can also text it directly to Ganaa at 703-300-3622 after booking.", isBot: true }]);
     }
   };
 
@@ -2054,7 +2315,7 @@ function ChatbotUI({ user, db, appId }) {
         l.address = userMsg;
         if (l.urgent) {
           l.time = 'ASAP / Emergency';
-          out.push(bot(`Thank you. Here's what I have:\n\n• Issue: ${ISSUE_LABELS[l.issueType] || 'Plumbing issue'} — ${l.details || l.issue}\n• Name: ${l.name}\n• Phone: ${l.phone}\n• Address: ${l.address}\n• Priority: 🚨 URGENT\n\nGanaa has been notified and will reach out as soon as possible. If this is a severe emergency, don't wait — call him directly at 703-655-6351.`));
+          out.push(bot(`Thank you. Here's what I have:\n\n• Issue: ${ISSUE_LABELS[l.issueType] || 'Plumbing issue'} — ${l.details || l.issue}\n• Name: ${l.name}\n• Phone: ${l.phone}\n• Address: ${l.address}\n• Priority: 🚨 URGENT\n\nGanaa has been notified and will reach out as soon as possible. If this is a severe emergency, don't wait — call him directly at 703-300-3622.`));
           next = 'finish';
         } else {
           out.push(bot("Almost done! When would work best for a visit?"));
@@ -2071,12 +2332,12 @@ function ChatbotUI({ user, db, appId }) {
       }
 
       case 'finish': {
-        out.push(bot("If anything else comes up, I'm here — or call Ganaa directly at 703-655-6351."));
+        out.push(bot("If anything else comes up, I'm here — or call Ganaa directly at 703-300-3622."));
         break;
       }
 
       default: {
-        out.push(bot("I'm here to help with any residential plumbing question. For emergencies, call 703-655-6351."));
+        out.push(bot("I'm here to help with any residential plumbing question. For emergencies, call 703-300-3622."));
       }
     }
 
@@ -2179,8 +2440,8 @@ function ChatbotUI({ user, db, appId }) {
 
         {(lead.urgent && (chatState === 'ask_name' || chatState === 'ask_contact_pref' || chatState === 'finish')) && !loading && (
           <div className="flex justify-center pt-1">
-            <a href="tel:7036556351" className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-full shadow flex items-center gap-2">
-              <Phone className="w-3.5 h-3.5" /> Emergency? Call 703-655-6351 now
+            <a href="tel:7033003622" className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-full shadow flex items-center gap-2">
+              <Phone className="w-3.5 h-3.5" /> Emergency? Call 703-300-3622 now
             </a>
           </div>
         )}

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160"><defs>
+<linearGradient id="metal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e2e8f0"/><stop offset=".45" stop-color="#f8fafc"/><stop offset="1" stop-color="#94a3b8"/></linearGradient>
+<linearGradient id="metalv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1f5f9"/><stop offset="1" stop-color="#94a3b8"/></linearGradient>
+<linearGradient id="chrome" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#cbd5e1"/><stop offset=".5" stop-color="#f8fafc"/><stop offset="1" stop-color="#64748b"/></linearGradient>
+<linearGradient id="copper" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#b45309"/></linearGradient>
+<linearGradient id="brass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#a16207"/></linearGradient>
+<linearGradient id="white" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d6d3d1"/></linearGradient>
+<linearGradient id="dark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#64748b"/><stop offset="1" stop-color="#1e293b"/></linearGradient>
+<linearGradient id="blue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#93c5fd"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient>
+<linearGradient id="red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fca5a5"/><stop offset="1" stop-color="#b91c1c"/></linearGradient>
+<linearGradient id="amber" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fcd34d"/><stop offset="1" stop-color="#b45309"/></linearGradient>
+<linearGradient id="yellow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde047"/><stop offset="1" stop-color="#ca8a04"/></linearGradient>
+</defs><rect width="200" height="160" fill="#f8fafc"/><ellipse cx="100" cy="146" rx="52" ry="7" fill="#0f172a" opacity=".08"/>
+<rect x="56" y="28" width="88" height="108" rx="6" fill="url(#metal)" stroke="#94a3b8"/>
+<rect x="61" y="34" width="78" height="15" rx="3" fill="url(#dark)"/>
+<circle cx="70" cy="41" r="2.5" fill="#93c5fd"/><circle cx="80" cy="41" r="2.5" fill="#93c5fd"/><circle cx="90" cy="41" r="2.5" fill="#fde047"/>
+<rect x="118" y="38" width="16" height="6" rx="3" fill="#94a3b8"/>
+<rect x="61" y="55" width="78" height="7" rx="3.5" fill="url(#chrome)" stroke="#64748b"/>
+<rect x="61" y="68" width="78" height="56" rx="3" fill="url(#metalv)" stroke="#cbd5e1"/>
+<line x1="66" y1="74" x2="134" y2="74" stroke="#f8fafc" stroke-width="2" opacity=".7"/>
+<rect x="61" y="126" width="78" height="8" rx="2" fill="#64748b"/>
+</svg>

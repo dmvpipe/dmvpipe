@@ -1,7 +1,7 @@
 // AUTO-GENERATED server-side price list — keep in sync with PRODUCTS in src/App.jsx.
 // Prices are authoritative HERE for payments so a tampered client can't change amounts.
 export const PRICES = {
-  'membership-yearly': { name: 'DMVPipe Home Care Membership — 1 Full Year', price: 249 },
+  'membership-yearly': { name: 'DMVPipe Protection Plan — 1 Full Year', price: 249 },
   'tur-115': { name: 'Cast Iron Flange Replacement', price: 1569.4 },
   'svc-tur-140': { name: 'Complete Tank Rebuild', price: 489.53 },
   'svc-ti-130': { name: 'Install New Toilet Seat Elongated', price: 197.8 },

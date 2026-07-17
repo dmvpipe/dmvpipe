@@ -157,7 +157,7 @@ async function startCardPayment(items, customerName, phone) {
 }
 const PRODUCTS = [
   // Membership
-  { id: 'membership-yearly', cat: 'Membership', name: 'DMVPipe Home Care Membership — 1 Full Year', price: 249, unit: 'year', img: '/products/items/membership.svg' },
+  { id: 'membership-yearly', cat: 'Membership', name: 'DMVPipe Protection Plan — 1 Full Year', price: 249, unit: 'year', img: '/products/items/membership.svg' },
 
   // Toilets
   { id: 'tur-115', cat: 'Toilets', name: 'Cast Iron Flange Replacement', price: 1569.4, unit: 'job', img: '/products/items/flange.svg' },
@@ -540,8 +540,8 @@ export default function App() {
       title = "Book a Service | DMVPipe Residential Plumbing";
       desc = "Book Ganaa for leak repair, water heaters, drains and more. No account needed — he confirms every request personally.";
     } else if (formattedView === 'shop') {
-      title = "Plumbing Materials Shop | DMVPipe Northern VA";
-      desc = "Order quality plumbing materials at Home Depot prices — water heaters, faucets, toilets, disposals — installed by a licensed master plumber, one bill for everything.";
+      title = "Plumbing Services & Pricing | DMVPipe Northern VA";
+      desc = "Up-front prices for every residential plumbing service — toilets, water heaters, gas lines, faucets — by a licensed master plumber. Book online, pay when the job is done.";
     } else if (VA_CITIES.map(c => c.toLowerCase().replace(/\s+/g, '-')).includes(formattedView)) {
       const cityIndex = VA_CITIES.findIndex(c => c.toLowerCase().replace(/\s+/g, '-') === formattedView);
       const cityName = VA_CITIES[cityIndex];
@@ -709,7 +709,7 @@ export default function App() {
             <button onClick={() => navigate('home')} className="block w-full text-left py-3 px-4 rounded-lg hover:bg-slate-50 font-medium text-slate-700">Home</button>
             <button onClick={() => navigate('services')} className="block w-full text-left py-3 px-4 rounded-lg hover:bg-slate-50 font-medium text-slate-700">Services</button>
             <button onClick={() => navigate('shop')} className="w-full text-left py-3 px-4 rounded-lg hover:bg-slate-50 font-medium text-slate-700 flex items-center gap-2">
-              Materials Shop
+              Services & Pricing
               {cartCount > 0 && <span className="bg-amber-400 text-stone-900 text-xs font-extrabold rounded-full px-1.5 py-0.5">{cartCount}</span>}
             </button>
             <button onClick={() => navigate('blog')} className="block w-full text-left py-3 px-4 rounded-lg hover:bg-slate-50 font-medium text-slate-700">Blog</button>
@@ -734,6 +734,7 @@ export default function App() {
         {currentView === 'contact' && <ContactView user={user} />}
         {currentView === 'account' && <AccountView user={user} db={db} appId={appId} cart={cart} updateCart={updateCart} clearCart={clearCart} navigate={navigate} />}
         {currentView === 'shop' && <ShopView navigate={navigate} cart={cart} updateCart={updateCart} />}
+        {currentView === 'checkout' && <CheckoutView db={db} user={user} appId={appId} cart={cart} updateCart={updateCart} clearCart={clearCart} navigate={navigate} />}
 
         {isCityView && <CityView navigate={navigate} city={activeCityName} />}
         {isPostView && <BlogPostView navigate={navigate} slug={currentView.replace('post-', '')} />}
@@ -760,7 +761,7 @@ export default function App() {
             <h3 className="text-white font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2 text-sm">
               <li><button onClick={() => navigate('services')} className="hover:text-white transition-colors">Residential Services</button></li>
-              <li><button onClick={() => navigate('shop')} className="hover:text-white transition-colors">Materials Shop</button></li>
+              <li><button onClick={() => navigate('shop')} className="hover:text-white transition-colors">Services & Pricing</button></li>
               <li><button onClick={() => navigate('blog')} className="hover:text-white transition-colors">Plumbing Tips</button></li>
               <li><button onClick={() => navigate('contact')} className="hover:text-white transition-colors">Contact Us</button></li>
               <li><button onClick={() => navigate('account')} className="hover:text-white transition-colors">Customer Login</button></li>
@@ -1198,7 +1199,7 @@ function ShopView({ navigate, cart, updateCart }) {
       {cartItems.length > 0 && (
         <div className="lg:hidden fixed bottom-24 left-4 right-4 z-40 max-w-md mx-auto">
           <button
-            onClick={() => navigate('account')}
+            onClick={() => navigate('checkout')}
             className="w-full bg-blue-900 text-white rounded-2xl shadow-2xl shadow-blue-900/30 px-5 py-4 flex items-center justify-between active:bg-blue-950"
           >
             <span className="flex items-center gap-3 font-bold">
@@ -1206,9 +1207,9 @@ function ShopView({ navigate, cart, updateCart }) {
                 <ShoppingCart className="w-6 h-6" />
                 <span className="absolute -top-2 -right-2 bg-amber-400 text-stone-900 text-[10px] font-extrabold rounded-full w-5 h-5 flex items-center justify-center">{cartItems.reduce((a, p) => a + cart[p.id], 0)}</span>
               </span>
-              ${fmtPrice(total)} in materials
+              ${fmtPrice(total)} in your basket
             </span>
-            <span className="bg-amber-400 text-stone-900 font-extrabold text-sm px-4 py-2 rounded-full">Book Now &rarr;</span>
+            <span className="bg-amber-400 text-stone-900 font-extrabold text-sm px-4 py-2 rounded-full">Checkout &rarr;</span>
           </button>
         </div>
       )}
@@ -1227,14 +1228,14 @@ function ShopView({ navigate, cart, updateCart }) {
             <span className="inline-flex items-center gap-2 bg-amber-400 text-stone-900 px-3 py-1 rounded-full text-xs font-extrabold mb-3">
               <ShieldCheck className="w-3.5 h-3.5" /> BEST VALUE
             </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2">Home Care Membership</h2>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2">DMVPipe Protection Plan</h2>
             <p className="text-blue-100/90 text-sm mb-4">Protect your home's plumbing all year for less than the cost of one service call.</p>
             <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-blue-50 mb-5">
-              <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0"/> Free water heater inspection every 3 months</li>
+              <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0"/> Free whole-house plumbing inspection every 3 months</li>
               <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0"/> $0 dispatch fee — evenings &amp; weekends included</li>
               <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0"/> Priority scheduling — members go first</li>
               <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0"/> Free plumbing consultations</li>
-              <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0"/> Free filter change once a year</li>
+              <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0"/> Free water heater flush once a year</li>
               <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0"/> 10% off all repairs &amp; installations</li>
             </ul>
           </div>
@@ -1261,7 +1262,7 @@ function ShopView({ navigate, cart, updateCart }) {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search materials… e.g. water heater, wax ring, faucet"
+            placeholder="Search services… e.g. water heater, toilet, faucet"
             className="w-full bg-white border border-stone-200 rounded-full pl-11 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm"
           />
         </div>
@@ -1319,9 +1320,9 @@ function ShopView({ navigate, cart, updateCart }) {
 
         {/* Cart summary */}
         <div className="bg-white rounded-2xl border border-stone-100 shadow-lg p-6 lg:sticky lg:top-48">
-          <h2 className="font-extrabold text-stone-900 text-lg mb-4 flex items-center gap-2"><ShoppingCart className="w-5 h-5 text-blue-700"/> Your Materials</h2>
+          <h2 className="font-extrabold text-stone-900 text-lg mb-4 flex items-center gap-2"><ShoppingCart className="w-5 h-5 text-blue-700"/> Your Basket</h2>
           {cartItems.length === 0 ? (
-            <p className="text-sm text-stone-500 leading-relaxed">Nothing added yet. Pick the materials you need — they'll be attached to your service booking.</p>
+            <p className="text-sm text-stone-500 leading-relaxed">Nothing added yet. Add the services you need and check out when you're ready.</p>
           ) : (
             <>
               <ul className="divide-y divide-stone-100 mb-4">
@@ -1339,14 +1340,167 @@ function ShopView({ navigate, cart, updateCart }) {
                 ))}
               </ul>
               <div className="flex justify-between font-extrabold text-stone-900 text-lg border-t border-stone-200 pt-4 mb-5">
-                <span>Materials total</span><span>${fmtPrice(total)}</span>
+                <span>Basket total</span><span>${fmtPrice(total)}</span>
               </div>
-              <button onClick={() => navigate('account')} className="w-full bg-amber-400 hover:bg-amber-300 text-stone-900 font-extrabold py-3.5 rounded-full transition-colors flex items-center justify-center gap-2">
-                <Calendar className="w-5 h-5"/> Book Service with Materials
+              <button onClick={() => navigate('checkout')} className="w-full bg-amber-400 hover:bg-amber-300 text-stone-900 font-extrabold py-3.5 rounded-full transition-colors flex items-center justify-center gap-2">
+                <ShoppingCart className="w-5 h-5"/> Checkout
               </button>
-              <p className="text-xs text-stone-400 mt-3 text-center leading-relaxed">Pay for service + materials together when the job is done — card, cash, or Zelle. Ganaa confirms availability and final pricing.</p>
+              <p className="text-xs text-stone-400 mt-3 text-center leading-relaxed">Pay online now or when the job is done — card, cash, or Zelle. Ganaa confirms availability and final pricing.</p>
             </>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CheckoutView({ db, user, appId, cart = {}, updateCart, clearCart, navigate }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+  const [payError, setPayError] = useState(null);
+  const formRef = useRef(null);
+  const cartItems = PRODUCTS.filter(p => cart[p.id]);
+  const total = cartItems.reduce((sum, p) => sum + p.price * cart[p.id], 0);
+
+  const saveOrder = async (form, paying) => {
+    const itemsText = cartItems.map(p => `${p.name} × ${cart[p.id]} ($${fmtPrice(p.price * cart[p.id])})`).join('; ');
+    const data = {
+      serviceType: `Shop order — ${cartItems.length} item${cartItems.length > 1 ? 's' : ''}`,
+      date: form.get('date') || 'Flexible',
+      time: form.get('time') || 'Flexible',
+      address: form.get('address'),
+      notes: `SHOP ORDER (${paying ? 'paying online' : 'pay on completion'}): ${itemsText} — Total: $${fmtPrice(total)} | Phone: ${form.get('phone')}${form.get('notes') ? ` | ${form.get('notes')}` : ''}`,
+      customerName: form.get('name'),
+      materials: cartItems.map(p => ({ id: p.id, name: p.name, qty: cart[p.id], price: p.price })),
+      materialsTotal: total,
+      status: 'pending',
+      createdAt: serverTimestamp()
+    };
+    notifyGanaa(`🛒 New shop order — DMVPipe (${paying ? 'PAYING ONLINE' : 'pay on completion'})`, {
+      Items: itemsText, Total: `$${fmtPrice(total)}`,
+      Name: data.customerName, Phone: form.get('phone'), Address: data.address,
+      'Preferred visit': `${data.date} — ${data.time}`, Notes: form.get('notes') || '—'
+    });
+    if (db) {
+      const currentUserId = (user && !user.isAnonymous) ? user.uid : 'simulated_user_123';
+      await addDoc(collection(db, 'artifacts', appId, 'users', currentUserId, 'appointments'), data);
+    }
+  };
+
+  const handleCheckout = async (paying) => {
+    if (!formRef.current || !formRef.current.reportValidity()) return;
+    const form = new FormData(formRef.current);
+    setSubmitting(true); setPayError(null);
+    try {
+      await saveOrder(form, paying);
+      const items = cartItems.map(p => ({ id: p.id, qty: cart[p.id] }));
+      if (clearCart) clearCart();
+      if (paying) {
+        await startCardPayment(items, form.get('name'), form.get('phone'));
+      } else {
+        setDone(true); setSubmitting(false);
+      }
+    } catch (e) {
+      console.error(e);
+      setPayError(e.message || 'Something went wrong');
+      setSubmitting(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <div className="animate-in fade-in duration-500 py-24 max-w-xl mx-auto px-4 text-center">
+        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle className="w-8 h-8" /></div>
+        <h1 className="text-3xl font-extrabold text-stone-900 mb-3">Order received!</h1>
+        <p className="text-stone-600 mb-8">Ganaa will call you to confirm the visit. You pay when the work is done — card, cash, or Zelle.</p>
+        <button onClick={() => navigate('home')} className="bg-blue-900 hover:bg-blue-800 text-white font-bold px-8 py-3 rounded-full">Back to Home</button>
+      </div>
+    );
+  }
+
+  if (cartItems.length === 0) {
+    return (
+      <div className="animate-in fade-in duration-500 py-24 max-w-xl mx-auto px-4 text-center">
+        <ShoppingCart className="w-12 h-12 text-stone-300 mx-auto mb-4" />
+        <h1 className="text-3xl font-extrabold text-stone-900 mb-3">Your basket is empty</h1>
+        <p className="text-stone-600 mb-8">Browse the services & pricing page and add what you need.</p>
+        <button onClick={() => navigate('shop')} className="bg-blue-900 hover:bg-blue-800 text-white font-bold px-8 py-3 rounded-full">Browse Services</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-in fade-in duration-500 py-12 md:py-16 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h1 className="text-3xl md:text-4xl font-extrabold text-stone-900 mb-2">Checkout</h1>
+      <p className="text-stone-600 mb-10">Tell us where and when — then pay online now, or after the job is done.</p>
+      <div className="grid md:grid-cols-5 gap-8 items-start">
+        <div className="md:col-span-3 bg-white rounded-2xl border border-stone-100 shadow-lg p-6 md:p-8">
+          <form ref={formRef} onSubmit={(e) => e.preventDefault()} className="space-y-5">
+            <div className="grid sm:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-bold text-stone-700 mb-1.5">Full name *</label>
+                <input name="name" required className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="Your name" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-stone-700 mb-1.5">Phone *</label>
+                <input name="phone" type="tel" required className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="(703) 555-0100" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-stone-700 mb-1.5">Service address *</label>
+              <input name="address" required className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="Street, city, VA" />
+            </div>
+            <div className="grid sm:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-bold text-stone-700 mb-1.5">Preferred date</label>
+                <input name="date" type="date" className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-stone-700 mb-1.5">Preferred time</label>
+                <select name="time" className="w-full border border-stone-200 rounded-xl px-4 py-3 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                  <option value="Flexible">Flexible</option>
+                  <option value="Morning (8am–12pm)">Morning (8am–12pm)</option>
+                  <option value="Afternoon (12pm–4pm)">Afternoon (12pm–4pm)</option>
+                  <option value="Evening (4pm–7pm)">Evening (4pm–7pm)</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-stone-700 mb-1.5">Notes for Ganaa</label>
+              <textarea name="notes" rows="2" className="w-full border border-stone-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="Anything we should know? Gate codes, pets, problem details…" />
+            </div>
+            {payError && <p className="text-sm text-red-600 font-semibold">{payError} — or choose pay on completion below.</p>}
+            <div className="space-y-3 pt-2">
+              <button type="button" disabled={submitting} onClick={() => handleCheckout(true)} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-colors flex justify-center items-center gap-2 text-lg">
+                {submitting ? 'Processing…' : <>Pay ${fmtPrice(total)} by card now</>}
+              </button>
+              <button type="button" disabled={submitting} onClick={() => handleCheckout(false)} className="w-full bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold py-4 rounded-xl transition-colors">
+                Order now, pay on completion
+              </button>
+            </div>
+            <p className="text-xs text-stone-400 text-center">Card payments are processed securely by Stripe — we never see your card number. Ganaa confirms every order personally.</p>
+          </form>
+        </div>
+        <div className="md:col-span-2 bg-white rounded-2xl border border-stone-100 shadow-lg p-6 md:sticky md:top-28">
+          <h2 className="font-extrabold text-stone-900 text-lg mb-4 flex items-center gap-2"><ShoppingCart className="w-5 h-5 text-blue-700"/> Your Basket</h2>
+          <ul className="divide-y divide-stone-100 mb-4">
+            {cartItems.map(p => (
+              <li key={p.id} className="py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-stone-800 truncate">{p.name}</p>
+                  <p className="text-xs text-stone-400">${fmtPrice(p.price)} × {cart[p.id]}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <p className="font-bold text-stone-900 text-sm">${fmtPrice(p.price * cart[p.id])}</p>
+                  <button onClick={() => updateCart(p.id, -cart[p.id])} aria-label="Remove item" className="text-stone-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4"/></button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="flex justify-between font-extrabold text-stone-900 text-lg border-t border-stone-200 pt-4">
+            <span>Total</span><span>${fmtPrice(total)}</span>
+          </div>
+          <button onClick={() => navigate('shop')} className="w-full mt-4 text-sm font-bold text-blue-700 hover:underline">&larr; Add more services</button>
         </div>
       </div>
     </div>
@@ -1696,7 +1850,7 @@ function AccountView({ user, db, appId, cart = {}, clearCart, navigate }) {
             <div className="bg-white p-6 md:p-10 rounded-3xl shadow-xl border border-stone-100">
               <SchedulingForm
                 db={db} user={user} appId={appId} userName="Guest"
-                guest={true} cart={cart} clearCart={clearCart} navigate={navigate}
+                guest={true} navigate={navigate}
                 onSuccess={() => setGuestSuccess(true)}
               />
             </div>
@@ -1787,7 +1941,7 @@ function AccountView({ user, db, appId, cart = {}, clearCart, navigate }) {
               <p className="text-slate-500 mb-8">Tell us what you need. Ganaa will review it shortly.</p>
               <SchedulingForm
                 db={db} user={user} appId={appId} userName={userName}
-                cart={cart} clearCart={clearCart} navigate={navigate}
+                navigate={navigate}
                 onSuccess={() => setShowScheduleForm(false)}
               />
             </div>
@@ -1841,14 +1995,9 @@ function AccountView({ user, db, appId, cart = {}, clearCart, navigate }) {
   );
 }
 
-function SchedulingForm({ db, user, appId, userName, onSuccess, guest = false, cart = {}, clearCart, navigate }) {
+function SchedulingForm({ db, user, appId, userName, onSuccess, guest = false, navigate }) {
   const [submitting, setSubmitting] = useState(false);
-  const [payOffer, setPayOffer] = useState(null); // { items, total, customerName, phone } after booking w/ cart
-  const [payBusy, setPayBusy] = useState(false);
-  const [payError, setPayError] = useState(null);
   const [photos, setPhotos] = useState([]);
-  const cartItems = PRODUCTS.filter(p => cart[p.id]);
-  const materialsTotal = cartItems.reduce((sum, p) => sum + p.price * cart[p.id], 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1859,27 +2008,21 @@ function SchedulingForm({ db, user, appId, userName, onSuccess, guest = false, c
     const customerName = guest ? formData.get('name') : userName;
     const phone = formData.get('phone') || (user && user.phoneNumber) || 'Not provided';
     const photoUrls = await uploadLeadPhotos(photos);
-    const materialsText = cartItems.length
-      ? cartItems.map(p => `${p.name} × ${cart[p.id]} ($${fmtPrice(p.price * cart[p.id])})`).join('; ') + ` — Materials total: $${fmtPrice(materialsTotal)}`
-      : '';
     const data = {
       photos: photoUrls,
       serviceType: formData.get('serviceType'),
       date: formData.get('date'),
       time: formData.get('time'),
       address: formData.get('address'),
-      notes: `${formData.get('notes') || ''}${phone !== 'Not provided' ? ` | Phone: ${phone}` : ''}${materialsText ? ` | MATERIALS: ${materialsText}` : ''}`,
+      notes: `${formData.get('notes') || ''}${phone !== 'Not provided' ? ` | Phone: ${phone}` : ''}`,
       customerName,
-      materials: cartItems.map(p => ({ id: p.id, name: p.name, qty: cart[p.id], price: p.price })),
-      materialsTotal,
       status: 'pending',
       createdAt: serverTimestamp()
     };
-    notifyGanaa(`📅 New service booking${cartItems.length ? ' + MATERIALS ORDER' : ''} — DMVPipe`, {
+    notifyGanaa(`📅 New service booking — DMVPipe`, {
       Service: data.serviceType, Date: data.date, Time: data.time,
       Name: customerName, Phone: phone, Address: data.address,
       Notes: formData.get('notes') || '—',
-      Materials: materialsText || 'None',
       'Situation photos': photoUrls.length ? photoUrls.join('  |  ') : 'None'
     });
 
@@ -1888,50 +2031,15 @@ function SchedulingForm({ db, user, appId, userName, onSuccess, guest = false, c
       const appointmentsRef = collection(db, 'artifacts', appId, 'users', currentUserId, 'appointments');
       await addDoc(appointmentsRef, data);
 
-      const offer = cartItems.length ? {
-        items: cartItems.map(p => ({ id: p.id, qty: cart[p.id] })),
-        total: materialsTotal, customerName, phone
-      } : null;
-      if (cartItems.length && clearCart) clearCart();
       setTimeout(() => {
         setSubmitting(false);
-        if (offer) setPayOffer(offer); else onSuccess();
+        onSuccess();
       }, 800);
     } catch (err) {
       console.error(err);
       setSubmitting(false);
     }
   };
-
-  if (payOffer) {
-    return (
-      <div className="text-center py-4 animate-in fade-in duration-300">
-        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-          <CheckCircle className="w-8 h-8" />
-        </div>
-        <h3 className="text-2xl font-extrabold text-stone-900 mb-2">Booking received!</h3>
-        <p className="text-stone-600 mb-6">How would you like to pay for the services (${fmtPrice(payOffer.total)})?</p>
-        {payError && <p className="text-sm text-red-600 font-semibold mb-3">{payError} — you can also simply pay on completion.</p>}
-        <div className="space-y-3 max-w-sm mx-auto">
-          <button
-            disabled={payBusy}
-            onClick={async () => {
-              setPayBusy(true); setPayError(null);
-              try { await startCardPayment(payOffer.items, payOffer.customerName, payOffer.phone); }
-              catch (e) { setPayError(e.message); setPayBusy(false); }
-            }}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-colors flex justify-center items-center gap-2"
-          >
-            {payBusy ? 'Opening secure checkout…' : <>Pay ${fmtPrice(payOffer.total)} by card now</>}
-          </button>
-          <button onClick={() => onSuccess()} className="w-full bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold py-3.5 rounded-xl transition-colors">
-            Pay on completion (card, cash, or Zelle)
-          </button>
-        </div>
-        <p className="text-xs text-stone-400 mt-4">Card payments are processed securely by Stripe — we never see your card number.</p>
-      </div>
-    );
-  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -1983,28 +2091,8 @@ function SchedulingForm({ db, user, appId, userName, onSuccess, guest = false, c
         <PhotoPicker photos={photos} setPhotos={setPhotos} />
         <p className="text-xs text-slate-400 mt-2">Photos help Ganaa bring the right parts on the first visit.</p>
       </div>
-      {cartItems.length > 0 && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="font-bold text-blue-900 text-sm flex items-center gap-2"><ShoppingCart className="w-4 h-4"/> Materials in this order</h4>
-            {navigate && <button type="button" onClick={() => navigate('shop')} className="text-xs font-bold text-blue-700 hover:underline">Edit</button>}
-          </div>
-          <ul className="text-sm text-blue-900/80 space-y-1">
-            {cartItems.map(p => (
-              <li key={p.id} className="flex justify-between gap-3">
-                <span className="truncate">{p.name} × {cart[p.id]}</span>
-                <span className="font-semibold shrink-0">${fmtPrice(p.price * cart[p.id])}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="flex justify-between font-extrabold text-blue-950 text-sm border-t border-blue-200 pt-2 mt-2">
-            <span>Materials total</span><span>${fmtPrice(materialsTotal)}</span>
-          </p>
-          <p className="text-xs text-blue-800/60 mt-2">One bill at the end — service + materials together (card, cash, or Zelle).</p>
-        </div>
-      )}
       <button disabled={submitting} type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-colors flex justify-center items-center gap-2 text-lg mt-4">
-        {submitting ? 'Processing Request...' : <><CheckCircle className="w-5 h-5"/> {cartItems.length ? `Confirm Booking + Materials ($${fmtPrice(materialsTotal)})` : 'Confirm Booking'}</>}
+        {submitting ? 'Processing Request...' : <><CheckCircle className="w-5 h-5"/> Confirm Booking</>}
       </button>
       <p className="text-sm text-center text-slate-500 mt-2 font-medium">Ganaa personally confirms every request — no automated dispatch.</p>
     </form>

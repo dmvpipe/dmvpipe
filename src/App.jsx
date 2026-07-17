@@ -3,7 +3,7 @@ import {
   Wrench, Home, Calendar, Phone, FileText, MessageSquare,
   AlertTriangle, CheckCircle, X, User, Clock, ShieldCheck,
   Droplet, MapPin, Send, Menu, LogOut, Info, Mail, Star, ChevronLeft,
-  ShoppingCart, Plus, Minus, Trash2, Camera, Search
+  ShoppingCart, Plus, Minus, Trash2, Camera, Search, Package, ExternalLink, BarChart3, Lock
 } from 'lucide-react';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { initializeApp } from 'firebase/app';
@@ -12,7 +12,7 @@ import {
   GoogleAuthProvider, signInWithPopup
 } from 'firebase/auth';
 import {
-  getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, getDoc
+  getFirestore, collection, collectionGroup, addDoc, getDocs, updateDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, getDoc, increment, writeBatch
 } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAnalytics } from "firebase/analytics";
@@ -154,6 +154,55 @@ async function startCardPayment(items, customerName, phone) {
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok || !data.url) throw new Error(data.error || 'Could not start payment');
   window.location.assign(data.url);
+}
+
+const ADMIN_EMAILS = ['info@dmvpipe.com'];
+const isSignedIn = (u) => !!u && !u.isAnonymous;
+
+// Shared Google sign-in — creates the user profile doc on first login
+async function signInWithGoogle() {
+  if (!auth) throw new Error('Sign-in unavailable');
+  const provider = new GoogleAuthProvider();
+  const result = await signInWithPopup(auth, provider);
+  const u = result.user;
+  if (db && u) {
+    const profileRef = doc(db, 'artifacts', appId, 'users', u.uid, 'profile', 'details');
+    const snap = await getDoc(profileRef);
+    if (!snap.exists()) {
+      await setDoc(profileRef, {
+        name: u.displayName || 'Valued Customer', email: u.email || '',
+        photoURL: u.photoURL || '', createdAt: serverTimestamp(), marketingOptIn: true
+      });
+    }
+  }
+  return result.user;
+}
+
+// Sign-up gate shown to guests where members-only content lives
+function SignInGate({ title, subtitle }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  return (
+    <div className="animate-in fade-in duration-500 py-20 max-w-xl mx-auto px-4 text-center">
+      <div className="w-16 h-16 bg-blue-50 text-blue-700 rounded-full flex items-center justify-center mx-auto mb-5"><Lock className="w-8 h-8"/></div>
+      <h1 className="text-3xl md:text-4xl font-extrabold text-stone-900 mb-3">{title}</h1>
+      <p className="text-stone-600 mb-8 leading-relaxed">{subtitle}</p>
+      {err && <p className="text-sm text-red-600 font-semibold mb-4">{err}</p>}
+      <button
+        disabled={busy}
+        onClick={async () => { setBusy(true); setErr(null); try { await signInWithGoogle(); } catch (e) { setErr('Sign-in didn\'t complete — please try again.'); } finally { setBusy(false); } }}
+        className="inline-flex items-center gap-3 bg-white border border-stone-300 hover:border-blue-400 hover:shadow-md text-stone-800 font-bold px-8 py-4 rounded-full transition-all text-lg"
+      >
+        <svg className="w-6 h-6" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.1A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.1V7.06H2.18A11 11 0 0 0 1 12c0 1.77.43 3.45 1.18 4.94l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A11 11 0 0 0 12 1 11 11 0 0 0 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+        {busy ? 'Opening Google…' : 'Continue with Google'}
+      </button>
+      <p className="text-sm text-stone-400 mt-6">Free — takes 10 seconds, no forms.</p>
+      <div className="mt-10 bg-red-50 border border-red-100 rounded-2xl p-5 text-left">
+        <p className="font-bold text-red-800 text-sm mb-1 flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> Have an emergency right now?</p>
+        <p className="text-sm text-red-700/80">No account needed — call <a href="tel:7033003622" className="font-bold underline">703-300-3622</a> or use the emergency button. Ganaa responds 24/7.</p>
+      </div>
+    </div>
+  );
 }
 const PRODUCTS = [
   // Membership
@@ -497,6 +546,13 @@ export default function App() {
   });
 
   const [user, setUser] = useState(null);
+  const [showUpsell, setShowUpsell] = useState(false);
+  useEffect(() => {
+    if (isSignedIn(user)) {
+      try { if (!window.localStorage.getItem('dmvpipe_upsell_done')) setShowUpsell(true); } catch { /* private mode */ }
+    }
+  }, [user]);
+  const dismissUpsell = () => { try { window.localStorage.setItem('dmvpipe_upsell_done', '1'); } catch {} setShowUpsell(false); };
   const [payBanner, setPayBanner] = useState(() => {
     try { return new URLSearchParams(window.location.search).get('payment'); } catch { return null; }
   });
@@ -647,6 +703,32 @@ export default function App() {
           <button onClick={() => setPayBanner(null)} aria-label="Dismiss" className="ml-2 opacity-80 hover:opacity-100"><X className="w-4 h-4"/></button>
         </div>
       )}
+      {showUpsell && (
+        <div className="fixed inset-0 z-50 bg-stone-900/60 flex items-center justify-center p-4" onClick={dismissUpsell}>
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-blue-900 p-6 text-center relative">
+              <button onClick={dismissUpsell} aria-label="Close" className="absolute top-4 right-4 text-blue-200 hover:text-white"><X className="w-5 h-5"/></button>
+              <ShieldCheck className="w-10 h-10 text-amber-400 mx-auto mb-2"/>
+              <h3 className="text-2xl font-extrabold text-white">Welcome to DMVPipe!</h3>
+              <p className="text-blue-100/90 text-sm mt-1">Protect your home all year with the Protection Plan</p>
+            </div>
+            <div className="p-6">
+              <ul className="space-y-2 text-sm text-stone-700 mb-5">
+                <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-green-600 mt-0.5 shrink-0"/> Free whole-house plumbing inspection every 3 months</li>
+                <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-green-600 mt-0.5 shrink-0"/> $0 dispatch fee — evenings &amp; weekends included</li>
+                <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-green-600 mt-0.5 shrink-0"/> Priority scheduling + free consultations</li>
+                <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-green-600 mt-0.5 shrink-0"/> Free water heater flush once a year</li>
+                <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-green-600 mt-0.5 shrink-0"/> 10% off all repairs &amp; installations</li>
+              </ul>
+              <p className="text-center mb-4"><span className="text-3xl font-extrabold text-stone-900">$249</span><span className="text-stone-500 font-semibold">/year</span></p>
+              <button onClick={() => { updateCart('membership-yearly', 1); dismissUpsell(); navigate('checkout'); }} className="w-full bg-amber-400 hover:bg-amber-300 text-stone-900 font-extrabold py-3.5 rounded-full transition-colors mb-2">
+                Join the Protection Plan
+              </button>
+              <button onClick={dismissUpsell} className="w-full text-stone-500 hover:text-stone-700 font-semibold py-2 text-sm">Maybe later</button>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="bg-white shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
@@ -663,7 +745,7 @@ export default function App() {
             <nav className="hidden md:flex space-x-7 items-center">
               <button onClick={() => navigate('home')} className={`font-semibold transition-colors ${currentView === 'home' ? 'text-blue-700' : 'text-stone-600 hover:text-blue-700'}`}>Home</button>
               <button onClick={() => navigate('services')} className={`font-semibold transition-colors ${currentView === 'services' ? 'text-blue-700' : 'text-stone-600 hover:text-blue-700'}`}>Services</button>
-              <button onClick={() => navigate('shop')} className={`font-semibold transition-colors flex items-center gap-1.5 ${currentView === 'shop' ? 'text-blue-700' : 'text-stone-600 hover:text-blue-700'}`}>
+              <button onClick={() => navigate('shop')} className={`font-semibold transition-colors flex items-center gap-1.5 ${currentView === 'shop' ? 'text-blue-700' : 'text-stone-600 hover:text-blue-700'}`}>{!isSignedIn(user) && <Lock className="w-3.5 h-3.5 text-stone-400"/>}
                 Shop
                 {cartCount > 0 && <span className="bg-amber-400 text-stone-900 text-xs font-extrabold rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center">{cartCount}</span>}
               </button>
@@ -733,8 +815,9 @@ export default function App() {
         {currentView === 'blog' && <BlogHubView navigate={navigate} />}
         {currentView === 'contact' && <ContactView user={user} />}
         {currentView === 'account' && <AccountView user={user} db={db} appId={appId} cart={cart} updateCart={updateCart} clearCart={clearCart} navigate={navigate} />}
-        {currentView === 'shop' && <ShopView navigate={navigate} cart={cart} updateCart={updateCart} />}
+        {currentView === 'shop' && <ShopView user={user} navigate={navigate} cart={cart} updateCart={updateCart} />}
         {currentView === 'checkout' && <CheckoutView db={db} user={user} appId={appId} cart={cart} updateCart={updateCart} clearCart={clearCart} navigate={navigate} />}
+        {currentView === 'admin' && <AdminView db={db} user={user} appId={appId} navigate={navigate} />}
 
         {isCityView && <CityView navigate={navigate} city={activeCityName} />}
         {isPostView && <BlogPostView navigate={navigate} slug={currentView.replace('post-', '')} />}
@@ -1185,8 +1268,13 @@ function ProductImage({ p }) {
   );
 }
 
-function ShopView({ navigate, cart, updateCart }) {
+function ShopView({ user, navigate, cart, updateCart }) {
   const [search, setSearch] = useState('');
+  if (!isSignedIn(user)) {
+    return <SignInGate
+      title="See every price. Instantly."
+      subtitle="Our full service price list — 210 up-front prices for toilets, water heaters, gas lines and more — is free for account holders. Sign up with Google in one tap and get your quote in seconds." />;
+  }
   const q = search.trim().toLowerCase();
   const visible = q ? PRODUCTS.filter(p => p.name.toLowerCase().includes(q) || p.cat.toLowerCase().includes(q)) : PRODUCTS;
   const categories = [...new Set(visible.map(p => p.cat))];
@@ -1356,6 +1444,7 @@ function ShopView({ navigate, cart, updateCart }) {
 
 function CheckoutView({ db, user, appId, cart = {}, updateCart, clearCart, navigate }) {
   const [submitting, setSubmitting] = useState(false);
+  const gated = !isSignedIn(user);
   const [done, setDone] = useState(false);
   const [payError, setPayError] = useState(null);
   const formRef = useRef(null);
@@ -1394,6 +1483,12 @@ function CheckoutView({ db, user, appId, cart = {}, updateCart, clearCart, navig
     try {
       await saveOrder(form, paying);
       const items = cartItems.map(p => ({ id: p.id, qty: cart[p.id] }));
+      // Best-effort inventory decrement — admin page tracks stock
+      try {
+        if (db) await Promise.all(items.map(it =>
+          setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'inventory', it.id), { stock: increment(-it.qty) }, { merge: true })
+        ));
+      } catch (e) { console.warn('Inventory update skipped:', e); }
       if (clearCart) clearCart();
       if (paying) {
         await startCardPayment(items, form.get('name'), form.get('phone'));
@@ -1416,6 +1511,10 @@ function CheckoutView({ db, user, appId, cart = {}, updateCart, clearCart, navig
         <button onClick={() => navigate('home')} className="bg-blue-900 hover:bg-blue-800 text-white font-bold px-8 py-3 rounded-full">Back to Home</button>
       </div>
     );
+  }
+
+  if (gated) {
+    return <SignInGate title="Sign in to check out" subtitle="Create your free account with Google to place orders and see member pricing." />;
   }
 
   if (cartItems.length === 0) {
@@ -1475,7 +1574,7 @@ function CheckoutView({ db, user, appId, cart = {}, updateCart, clearCart, navig
                 {submitting ? 'Processing…' : <>Pay ${fmtPrice(total)} by card now</>}
               </button>
               <button type="button" disabled={submitting} onClick={() => handleCheckout(false)} className="w-full bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold py-4 rounded-xl transition-colors">
-                Order now, pay on completion
+                Order now, pay on completion (card, cash, or Zelle)
               </button>
             </div>
             <p className="text-xs text-stone-400 text-center">Card payments are processed securely by Stripe — we never see your card number. Ganaa confirms every order personally.</p>
@@ -1503,6 +1602,230 @@ function CheckoutView({ db, user, appId, cart = {}, updateCart, clearCart, navig
           <button onClick={() => navigate('shop')} className="w-full mt-4 text-sm font-bold text-blue-700 hover:underline">&larr; Add more services</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ====== ADMIN (Ganaa only — dmvpipe.com/admin) ======
+function AdminView({ db, user, appId, navigate }) {
+  const [inv, setInv] = useState(null);           // { id: {stock, name, cat} }
+  const [reqs, setReqs] = useState([]);           // appointment docs incl. ref path
+  const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
+  const [invSearch, setInvSearch] = useState('');
+  const [note, setNote] = useState(null);
+
+  const authorized = isSignedIn(user) && ADMIN_EMAILS.includes((user.email || '').toLowerCase());
+
+  const loadAll = async () => {
+    if (!db) return;
+    setLoading(true);
+    try {
+      // Inventory
+      const invSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'inventory'));
+      const im = {};
+      invSnap.forEach(d => { im[d.id] = d.data(); });
+      setInv(im);
+      // Requests: guest bucket + (best-effort) all signed-in users via collection group
+      const seen = {}; const all = [];
+      const guestSnap = await getDocs(collection(db, 'artifacts', appId, 'users', 'simulated_user_123', 'appointments'));
+      guestSnap.forEach(d => { seen[d.ref.path] = 1; all.push({ id: d.id, path: d.ref.path, ...d.data() }); });
+      try {
+        const cgSnap = await getDocs(collectionGroup(db, 'appointments'));
+        cgSnap.forEach(d => { if (!seen[d.ref.path]) all.push({ id: d.id, path: d.ref.path, ...d.data() }); });
+      } catch (e) {
+        setNote('Showing guest requests only — enable the "appointments" collection-group index/rules in Firebase to see signed-in customers too.');
+      }
+      all.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      setReqs(all);
+    } catch (e) {
+      console.error(e);
+      setNote('Could not load some data — check Firestore rules allow admin reads.');
+    }
+    setLoading(false);
+  };
+  useEffect(() => { if (authorized) loadAll(); }, [authorized]);
+
+  if (!isSignedIn(user)) return <SignInGate title="Admin sign-in" subtitle="Sign in with the business Google account to manage DMVPipe." />;
+  if (!authorized) {
+    return (
+      <div className="py-24 text-center max-w-lg mx-auto px-4">
+        <Lock className="w-10 h-10 text-stone-300 mx-auto mb-4"/>
+        <h1 className="text-2xl font-extrabold text-stone-900 mb-2">Not authorized</h1>
+        <p className="text-stone-500">This page is for DMVPipe staff. You're signed in as {user.email}.</p>
+      </div>
+    );
+  }
+
+  const emergencies = reqs.filter(r => r.isEmergency);
+  const orders = reqs.filter(r => !r.isEmergency && (r.materialsTotal || 0) > 0);
+  const bookings = reqs.filter(r => !r.isEmergency && !((r.materialsTotal || 0) > 0));
+  const revenue = orders.reduce((s, r) => s + (r.materialsTotal || 0), 0);
+  const memberships = orders.filter(r => (r.materials || []).some(m => m.id === 'membership-yearly')).length;
+  const invList = inv ? Object.entries(inv).map(([id, v]) => ({ id, ...v })).sort((a, b) => (a.stock ?? 99) - (b.stock ?? 99)) : [];
+  const lowStock = invList.filter(i => (i.stock ?? 0) <= 1);
+  const invVisible = invSearch.trim()
+    ? invList.filter(i => (i.name || i.id).toLowerCase().includes(invSearch.trim().toLowerCase()))
+    : invList;
+
+  const seedInventory = async () => {
+    if (!db || seeding) return;
+    if (!window.confirm('Set stock to 5 for ALL items? This overwrites current counts.')) return;
+    setSeeding(true);
+    try {
+      const chunks = [];
+      for (let i = 0; i < PRODUCTS.length; i += 400) chunks.push(PRODUCTS.slice(i, i + 400));
+      for (const chunk of chunks) {
+        const batch = writeBatch(db);
+        chunk.forEach(p => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'inventory', p.id), { stock: 5, name: p.name, cat: p.cat }));
+        await batch.commit();
+      }
+      await loadAll();
+    } catch (e) { console.error(e); setNote('Seeding failed — check Firestore rules.'); }
+    setSeeding(false);
+  };
+
+  const bumpStock = async (id, delta) => {
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'inventory', id), { stock: increment(delta) }, { merge: true });
+      setInv(prev => ({ ...prev, [id]: { ...prev[id], stock: (prev[id]?.stock || 0) + delta } }));
+    } catch (e) { console.error(e); }
+  };
+
+  const gcalUrl = (r) => {
+    const pad = (n) => String(n).padStart(2, '0');
+    const fmt = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+    const start = new Date(Date.now() + 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: `🚨 EMERGENCY — ${r.issue || 'Plumbing'} (${r.phone || ''})`,
+      dates: `${fmt(start)}/${fmt(end)}`,
+      details: `Issue: ${r.issue || '—'}\nPhone: ${r.phone || '—'}\nEmail: ${r.email || '—'}`,
+      location: r.address || ''
+    });
+    return `https://calendar.google.com/calendar/render?${params}`;
+  };
+
+  const smsUrl = (r) => {
+    const num = (r.phone || '').replace(/[^0-9+]/g, '');
+    const body = `Hi, this is Ganaa from DMVPipe Plumbing. I received your emergency request and I'm on my way — I'll call you shortly to confirm details. If anything changes, reach me at 703-300-3622.`;
+    return `sms:${num}&body=${encodeURIComponent(body)}`;
+  };
+
+  const acceptEmergency = async (r) => {
+    try {
+      await updateDoc(doc(db, r.path), { status: 'CONFIRMED', confirmedAt: serverTimestamp() });
+      setReqs(prev => prev.map(x => x.path === r.path ? { ...x, status: 'CONFIRMED' } : x));
+      window.open(gcalUrl(r), '_blank');
+    } catch (e) { console.error(e); setNote('Could not update the request — check Firestore rules.'); }
+  };
+
+  const fmtWhen = (r) => r.createdAt?.seconds ? new Date(r.createdAt.seconds * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—';
+
+  return (
+    <div className="animate-in fade-in duration-500 py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-extrabold text-stone-900">Ganaa's Dashboard</h1>
+          <p className="text-stone-500 text-sm">Signed in as {user.email}</p>
+        </div>
+        <div className="flex gap-3">
+          <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-[#635bff] hover:bg-[#5851e8] text-white font-bold px-5 py-2.5 rounded-full text-sm">
+            <BarChart3 className="w-4 h-4"/> Stripe payments & KPIs <ExternalLink className="w-3.5 h-3.5"/>
+          </a>
+          <button onClick={loadAll} className="bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold px-5 py-2.5 rounded-full text-sm">Refresh</button>
+        </div>
+      </div>
+
+      {note && <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm font-semibold rounded-xl px-4 py-3 mb-6">{note}</div>}
+      {loading ? <p className="text-stone-500 py-12 text-center">Loading…</p> : (
+      <>
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5"><p className="text-xs font-bold text-stone-400 uppercase">Emergencies waiting</p><p className={`text-3xl font-extrabold ${emergencies.filter(r => r.status === 'URGENT').length ? 'text-red-600' : 'text-stone-900'}`}>{emergencies.filter(r => r.status === 'URGENT').length}</p></div>
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5"><p className="text-xs font-bold text-stone-400 uppercase">Bookings</p><p className="text-3xl font-extrabold text-stone-900">{bookings.length}</p></div>
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5"><p className="text-xs font-bold text-stone-400 uppercase">Shop orders ($)</p><p className="text-3xl font-extrabold text-stone-900">${fmtPrice(revenue)}</p></div>
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5"><p className="text-xs font-bold text-stone-400 uppercase">Memberships sold</p><p className="text-3xl font-extrabold text-stone-900">{memberships}</p></div>
+      </div>
+
+      {/* Emergencies */}
+      <div className="mb-10">
+        <h2 className="text-xl font-extrabold text-stone-900 mb-4 flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-red-500"/> Emergency requests</h2>
+        {emergencies.length === 0 ? <p className="text-sm text-stone-400 bg-white rounded-2xl border border-stone-100 p-6">No emergency requests.</p> : (
+          <div className="space-y-3">
+            {emergencies.map(r => (
+              <div key={r.path} className={`bg-white rounded-2xl border p-5 flex flex-wrap items-center gap-4 justify-between ${r.status === 'URGENT' ? 'border-red-200 shadow-md' : 'border-stone-100'}`}>
+                <div className="min-w-0">
+                  <p className="font-bold text-stone-900">{r.issue || 'Plumbing emergency'} <span className={`ml-2 text-xs font-extrabold px-2 py-0.5 rounded-full ${r.status === 'URGENT' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{r.status}</span></p>
+                  <p className="text-sm text-stone-500">{fmtWhen(r)} · {r.address || 'No address'} · <a className="font-semibold text-blue-700" href={`tel:${r.phone}`}>{r.phone}</a>{r.email ? ` · ${r.email}` : ''}</p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  {r.status === 'URGENT' ? (
+                    <button onClick={() => acceptEmergency(r)} className="bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2.5 rounded-full text-sm flex items-center gap-2"><CheckCircle className="w-4 h-4"/> Accept + Calendar</button>
+                  ) : (
+                    <a href={gcalUrl(r)} target="_blank" rel="noopener noreferrer" className="bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold px-4 py-2.5 rounded-full text-sm flex items-center gap-2"><Calendar className="w-4 h-4"/> Calendar</a>
+                  )}
+                  {r.phone && <a href={smsUrl(r)} className="bg-blue-900 hover:bg-blue-800 text-white font-bold px-4 py-2.5 rounded-full text-sm flex items-center gap-2"><Send className="w-4 h-4"/> Text confirmation</a>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Inventory */}
+      <div className="mb-10">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="text-xl font-extrabold text-stone-900 flex items-center gap-2"><Package className="w-5 h-5 text-blue-700"/> Inventory</h2>
+          <button onClick={seedInventory} disabled={seeding} className="bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold px-4 py-2 rounded-full text-sm">{seeding ? 'Setting up…' : (invList.length ? 'Reset all to 5' : 'Initialize inventory (5 each)')}</button>
+        </div>
+        {lowStock.length > 0 && (
+          <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl px-4 py-3 mb-4 text-sm font-semibold">
+            ⚠️ Buy more: {lowStock.slice(0, 8).map(i => `${i.name || i.id} (${i.stock ?? 0} left)`).join(', ')}{lowStock.length > 8 ? ` +${lowStock.length - 8} more` : ''}
+          </div>
+        )}
+        {invList.length === 0 ? <p className="text-sm text-stone-400 bg-white rounded-2xl border border-stone-100 p-6">No inventory yet — click "Initialize inventory (5 each)" to start tracking all {PRODUCTS.length} items.</p> : (
+          <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-stone-100">
+              <input value={invSearch} onChange={(e) => setInvSearch(e.target.value)} placeholder="Search inventory…" className="w-full max-w-sm border border-stone-200 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div className="max-h-[28rem] overflow-y-auto divide-y divide-stone-50">
+              {invVisible.map(i => (
+                <div key={i.id} className={`px-5 py-3 flex items-center justify-between gap-4 ${(i.stock ?? 0) <= 1 ? 'bg-red-50/60' : ''}`}>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-stone-800 truncate">{i.name || i.id}</p>
+                    <p className="text-xs text-stone-400">{i.cat || ''}</p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    {(i.stock ?? 0) <= 1 && <span className="text-xs font-extrabold text-red-600">LOW — buy more</span>}
+                    <button onClick={() => bumpStock(i.id, -1)} className="p-1.5 rounded-full bg-stone-100 hover:bg-stone-200"><Minus className="w-4 h-4"/></button>
+                    <span className={`font-extrabold w-8 text-center ${(i.stock ?? 0) <= 1 ? 'text-red-600' : 'text-stone-900'}`}>{i.stock ?? 0}</span>
+                    <button onClick={() => bumpStock(i.id, 1)} className="p-1.5 rounded-full bg-stone-100 hover:bg-stone-200"><Plus className="w-4 h-4"/></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Recent bookings & orders */}
+      <div>
+        <h2 className="text-xl font-extrabold text-stone-900 mb-4 flex items-center gap-2"><Calendar className="w-5 h-5 text-blue-700"/> Recent bookings &amp; orders</h2>
+        {bookings.length + orders.length === 0 ? <p className="text-sm text-stone-400 bg-white rounded-2xl border border-stone-100 p-6">Nothing yet.</p> : (
+          <div className="bg-white rounded-2xl border border-stone-100 shadow-sm divide-y divide-stone-50 max-h-96 overflow-y-auto">
+            {[...orders, ...bookings].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 30).map(r => (
+              <div key={r.path} className="px-5 py-3">
+                <p className="text-sm font-semibold text-stone-800">{r.serviceType || 'Booking'} — {r.customerName || 'Customer'}{(r.materialsTotal || 0) > 0 ? ` · $${fmtPrice(r.materialsTotal)}` : ''}</p>
+                <p className="text-xs text-stone-400">{fmtWhen(r)} · {r.date || ''} {r.time || ''} · {r.address || ''}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      </>
+      )}
     </div>
   );
 }

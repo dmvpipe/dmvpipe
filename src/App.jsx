@@ -12,7 +12,7 @@ import {
   GoogleAuthProvider, signInWithPopup
 } from 'firebase/auth';
 import {
-  getFirestore, collection, collectionGroup, addDoc, getDocs, updateDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, getDoc, increment, writeBatch
+  getFirestore, collection, collectionGroup, addDoc, getDocs, updateDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, getDoc, increment, writeBatch, runTransaction
 } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAnalytics } from "firebase/analytics";
@@ -176,6 +176,23 @@ async function signInWithGoogle() {
     }
   }
   return result.user;
+}
+
+// Activate Protection Plan membership on the buyer's profile: DMV-#### number + 1-year term
+async function activateMembership(u) {
+  if (!db || !u || u.isAnonymous) return null;
+  const counterRef = doc(db, 'artifacts', appId, 'public', 'data', 'counters', 'members');
+  const memberNo = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(counterRef);
+    const n = (snap.exists() ? snap.data().count : 0) + 1;
+    tx.set(counterRef, { count: n }, { merge: true });
+    return 'DMV-' + String(n).padStart(4, '0');
+  });
+  const until = new Date(); until.setFullYear(until.getFullYear() + 1);
+  await setDoc(doc(db, 'artifacts', appId, 'users', u.uid, 'profile', 'details'), {
+    member: { no: memberNo, plan: 'DMVPipe Protection Plan', since: new Date().toISOString().slice(0, 10), until: until.toISOString().slice(0, 10) }
+  }, { merge: true });
+  return memberNo;
 }
 
 // Sign-up gate shown to guests where members-only content lives
@@ -1490,6 +1507,9 @@ function CheckoutView({ db, user, appId, cart = {}, updateCart, clearCart, navig
     try {
       await saveOrder(form, paying);
       const items = cartItems.map(p => ({ id: p.id, qty: cart[p.id] }));
+      if (items.some(it => it.id === 'membership-yearly')) {
+        try { await activateMembership(user); } catch (e) { console.warn('Membership flag skipped:', e); }
+      }
       // Best-effort inventory decrement — admin page tracks stock
       try {
         if (db) await Promise.all(items.map(it =>
@@ -1615,8 +1635,12 @@ function CheckoutView({ db, user, appId, cart = {}, updateCart, clearCart, navig
 
 // ====== ADMIN (Ganaa only — dmvpipe.com/admin) ======
 function AdminView({ db, user, appId, navigate }) {
-  const [inv, setInv] = useState(null);           // { id: {stock, name, cat} }
-  const [reqs, setReqs] = useState([]);           // appointment docs incl. ref path
+  const [tab, setTab] = useState('dashboard');
+  const [inv, setInv] = useState(null);
+  const [reqs, setReqs] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [stripe, setStripe] = useState(null);
+  const [stripeErr, setStripeErr] = useState(null);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
   const [invSearch, setInvSearch] = useState('');
@@ -1628,12 +1652,10 @@ function AdminView({ db, user, appId, navigate }) {
     if (!db) return;
     setLoading(true);
     try {
-      // Inventory
       const invSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'inventory'));
-      const im = {};
-      invSnap.forEach(d => { im[d.id] = d.data(); });
+      const im = {}; invSnap.forEach(d => { im[d.id] = d.data(); });
       setInv(im);
-      // Requests: guest bucket + (best-effort) all signed-in users via collection group
+      // Requests: guest bucket + all users via collection group
       const seen = {}; const all = [];
       const guestSnap = await getDocs(collection(db, 'artifacts', appId, 'users', 'simulated_user_123', 'appointments'));
       guestSnap.forEach(d => { seen[d.ref.path] = 1; all.push({ id: d.id, path: d.ref.path, ...d.data() }); });
@@ -1641,17 +1663,38 @@ function AdminView({ db, user, appId, navigate }) {
         const cgSnap = await getDocs(collectionGroup(db, 'appointments'));
         cgSnap.forEach(d => { if (!seen[d.ref.path]) all.push({ id: d.id, path: d.ref.path, ...d.data() }); });
       } catch (e) {
-        setNote('Showing guest requests only — enable the "appointments" collection-group index/rules in Firebase to see signed-in customers too.');
+        setNote('Showing guest requests only — Firestore may need a collection-group index for "appointments".');
       }
       all.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       setReqs(all);
-    } catch (e) {
-      console.error(e);
-      setNote('Could not load some data — check Firestore rules allow admin reads.');
-    }
+      // Customers via profile collection group
+      try {
+        const profSnap = await getDocs(collectionGroup(db, 'profile'));
+        const cs = [];
+        profSnap.forEach(d => {
+          const uid = d.ref.path.split('/')[3];
+          cs.push({ uid, ...d.data() });
+        });
+        cs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        setCustomers(cs);
+      } catch (e) {
+        setNote('Customer list needs a collection-group index for "profile" — open the browser console for Firebase’s one-click link.');
+      }
+    } catch (e) { console.error(e); setNote('Some data could not load — check Firestore rules.'); }
     setLoading(false);
   };
-  useEffect(() => { if (authorized) loadAll(); }, [authorized]);
+
+  const loadStripe = async () => {
+    try {
+      const t = await user.getIdToken();
+      const resp = await fetch('/api/stripe-stats', { headers: { Authorization: `Bearer ${t}` } });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'failed');
+      setStripe(data); setStripeErr(null);
+    } catch (e) { setStripeErr(e.message); }
+  };
+
+  useEffect(() => { if (authorized) { loadAll(); loadStripe(); } }, [authorized]);
 
   if (!isSignedIn(user)) return <SignInGate title="Admin sign-in" subtitle="Sign in with the business Google account to manage DMVPipe." />;
   if (!authorized) {
@@ -1665,26 +1708,23 @@ function AdminView({ db, user, appId, navigate }) {
   }
 
   const emergencies = reqs.filter(r => r.isEmergency);
+  const urgentCount = emergencies.filter(r => r.status === 'URGENT').length;
   const orders = reqs.filter(r => !r.isEmergency && (r.materialsTotal || 0) > 0);
   const bookings = reqs.filter(r => !r.isEmergency && !((r.materialsTotal || 0) > 0));
-  const revenue = orders.reduce((s, r) => s + (r.materialsTotal || 0), 0);
-  const memberships = orders.filter(r => (r.materials || []).some(m => m.id === 'membership-yearly')).length;
+  const materialsRevenue = orders.reduce((s, r) => s + (r.materialsTotal || 0), 0);
+  const members = customers.filter(c => c.member);
   const invList = inv ? Object.entries(inv).map(([id, v]) => ({ id, ...v })).sort((a, b) => (a.stock ?? 99) - (b.stock ?? 99)) : [];
   const lowStock = invList.filter(i => (i.stock ?? 0) <= 1);
-  const invVisible = invSearch.trim()
-    ? invList.filter(i => (i.name || i.id).toLowerCase().includes(invSearch.trim().toLowerCase()))
-    : invList;
+  const invVisible = invSearch.trim() ? invList.filter(i => (i.name || i.id).toLowerCase().includes(invSearch.trim().toLowerCase())) : invList;
 
   const seedInventory = async () => {
     if (!db || seeding) return;
     if (!window.confirm('Set stock to 5 for ALL items? This overwrites current counts.')) return;
     setSeeding(true);
     try {
-      const chunks = [];
-      for (let i = 0; i < PRODUCTS.length; i += 400) chunks.push(PRODUCTS.slice(i, i + 400));
-      for (const chunk of chunks) {
+      for (let i = 0; i < PRODUCTS.length; i += 400) {
         const batch = writeBatch(db);
-        chunk.forEach(p => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'inventory', p.id), { stock: 5, name: p.name, cat: p.cat }));
+        PRODUCTS.slice(i, i + 400).forEach(p => batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'inventory', p.id), { stock: 5, name: p.name, cat: p.cat }));
         await batch.commit();
       }
       await loadAll();
@@ -1699,140 +1739,253 @@ function AdminView({ db, user, appId, navigate }) {
     } catch (e) { console.error(e); }
   };
 
-  const gcalUrl = (r) => {
+  const gcalUrl = (r, title) => {
     const pad = (n) => String(n).padStart(2, '0');
     const fmt = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
-    const start = new Date(Date.now() + 60 * 60 * 1000);
+    let start = new Date(Date.now() + 60 * 60 * 1000);
+    if (r.date && /^\d{4}-\d{2}-\d{2}$/.test(r.date)) {
+      const hour = /Morning/.test(r.time || '') ? 8 : /Afternoon/.test(r.time || '') ? 12 : /Evening/.test(r.time || '') ? 16 : 9;
+      start = new Date(`${r.date}T${pad(hour)}:00:00`);
+    }
     const end = new Date(start.getTime() + 60 * 60 * 1000);
     const params = new URLSearchParams({
       action: 'TEMPLATE',
-      text: `🚨 EMERGENCY — ${r.issue || 'Plumbing'} (${r.phone || ''})`,
+      text: title || `${r.serviceType || 'Service'} — ${r.customerName || r.phone || 'Customer'}`,
       dates: `${fmt(start)}/${fmt(end)}`,
-      details: `Issue: ${r.issue || '—'}\nPhone: ${r.phone || '—'}\nEmail: ${r.email || '—'}`,
+      details: `${r.issue || r.serviceType || ''}\n${r.notes || ''}\nPhone: ${r.phone || '—'}`,
       location: r.address || ''
     });
     return `https://calendar.google.com/calendar/render?${params}`;
   };
 
+  const phoneOf = (r) => (r.phone || ((r.notes || '').match(/Phone: ([\d\s()+-]+)/) || [])[1] || '').trim();
   const smsUrl = (r) => {
-    const num = (r.phone || '').replace(/[^0-9+]/g, '');
-    const body = `Hi, this is Ganaa from DMVPipe Plumbing. I received your emergency request and I'm on my way — I'll call you shortly to confirm details. If anything changes, reach me at 703-300-3622.`;
+    const num = phoneOf(r).replace(/[^0-9+]/g, '');
+    const body = r.isEmergency
+      ? `Hi, this is Ganaa from DMVPipe Plumbing. I received your emergency request and I'm on my way — I'll call you shortly. If anything changes: 703-300-3622.`
+      : `Hi${r.customerName ? ' ' + r.customerName.split(' ')[0] : ''}, this is Ganaa from DMVPipe Plumbing. Your appointment is confirmed${r.date ? ` for ${r.date}${r.time && r.time !== 'Flexible' ? ' (' + r.time + ')' : ''}` : ''}. See you then! — 703-300-3622`;
     return `sms:${num}&body=${encodeURIComponent(body)}`;
   };
 
-  const acceptEmergency = async (r) => {
+  const confirmReq = async (r) => {
     try {
       await updateDoc(doc(db, r.path), { status: 'CONFIRMED', confirmedAt: serverTimestamp() });
       setReqs(prev => prev.map(x => x.path === r.path ? { ...x, status: 'CONFIRMED' } : x));
-      window.open(gcalUrl(r), '_blank');
+      window.open(gcalUrl(r, r.isEmergency ? `🚨 EMERGENCY — ${r.issue || 'Plumbing'}` : undefined), '_blank');
     } catch (e) { console.error(e); setNote('Could not update the request — check Firestore rules.'); }
   };
 
   const fmtWhen = (r) => r.createdAt?.seconds ? new Date(r.createdAt.seconds * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—';
 
+  const NAV = [
+    ['dashboard', 'Dashboard', <BarChart3 key="i" className="w-4 h-4"/>],
+    ['customers', 'Customers', <User key="i" className="w-4 h-4"/>],
+    ['members', 'Members', <ShieldCheck key="i" className="w-4 h-4"/>],
+    ['orders', 'Orders', <ShoppingCart key="i" className="w-4 h-4"/>],
+    ['requests', 'Requests', <AlertTriangle key="i" className="w-4 h-4"/>],
+    ['inventory', 'Inventory', <Package key="i" className="w-4 h-4"/>],
+  ];
+
+  const Card = ({ label, value, accent }) => (
+    <div className="bg-white rounded-xl border border-stone-200 p-4">
+      <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wide">{label}</p>
+      <p className={`text-2xl font-extrabold ${accent || 'text-stone-900'}`}>{value}</p>
+    </div>
+  );
+
+  const StatusPill = ({ s }) => (
+    <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${s === 'URGENT' ? 'bg-red-100 text-red-700' : s === 'CONFIRMED' ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-600'}`}>{s || 'pending'}</span>
+  );
+
+  const ReqRow = ({ r, emergency }) => (
+    <div className={`bg-white rounded-xl border p-4 flex flex-wrap items-center gap-3 justify-between ${emergency && r.status === 'URGENT' ? 'border-red-300 shadow-md' : 'border-stone-200'}`}>
+      <div className="min-w-0">
+        <p className="font-bold text-stone-900 text-sm">
+          {emergency ? (r.issue || 'Plumbing emergency') : `${r.serviceType || 'Booking'} — ${r.customerName || 'Customer'}`}
+          {(r.materialsTotal || 0) > 0 && <span className="ml-2 text-blue-700">${fmtPrice(r.materialsTotal)}</span>}
+          <span className="ml-2"><StatusPill s={r.status}/></span>
+        </p>
+        <p className="text-xs text-stone-500 mt-0.5">{fmtWhen(r)} · {r.date || ''} {r.time || ''} · {r.address || 'No address'}{phoneOf(r) ? <> · <a className="font-semibold text-blue-700" href={`tel:${phoneOf(r)}`}>{phoneOf(r)}</a></> : null}</p>
+        {r.notes && <p className="text-xs text-stone-400 mt-0.5 max-w-xl truncate">{r.notes}</p>}
+      </div>
+      <div className="flex gap-2 shrink-0">
+        {r.status !== 'CONFIRMED' ? (
+          <button onClick={() => confirmReq(r)} className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-full text-xs flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5"/> Accept + Calendar</button>
+        ) : (
+          <a href={gcalUrl(r)} target="_blank" rel="noopener noreferrer" className="bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold px-3 py-2 rounded-full text-xs flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5"/> Calendar</a>
+        )}
+        {phoneOf(r) && <a href={smsUrl(r)} className="bg-blue-900 hover:bg-blue-800 text-white font-bold px-3 py-2 rounded-full text-xs flex items-center gap-1.5"><Send className="w-3.5 h-3.5"/> Text</a>}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="animate-in fade-in duration-500 py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-extrabold text-stone-900">Ganaa's Dashboard</h1>
-          <p className="text-stone-500 text-sm">Signed in as {user.email}</p>
+    <div className="flex min-h-[calc(100vh-5rem)] bg-stone-100 -mb-px">
+      {/* Sidebar */}
+      <aside className="w-16 md:w-56 bg-stone-900 text-stone-300 shrink-0 flex flex-col">
+        <div className="px-3 md:px-5 py-5 border-b border-stone-800">
+          <p className="hidden md:block font-extrabold text-white text-sm">DMVPipe Admin</p>
+          <p className="hidden md:block text-[11px] text-stone-500 truncate">{user.email}</p>
+          <Wrench className="md:hidden w-5 h-5 text-white mx-auto"/>
         </div>
-        <div className="flex gap-3">
-          <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-[#635bff] hover:bg-[#5851e8] text-white font-bold px-5 py-2.5 rounded-full text-sm">
-            <BarChart3 className="w-4 h-4"/> Stripe payments & KPIs <ExternalLink className="w-3.5 h-3.5"/>
-          </a>
-          <button onClick={loadAll} className="bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold px-5 py-2.5 rounded-full text-sm">Refresh</button>
+        <nav className="flex-1 py-3">
+          {NAV.map(([id, label, icon]) => (
+            <button key={id} onClick={() => setTab(id)} className={`w-full flex items-center gap-3 px-3 md:px-5 py-2.5 text-sm font-semibold transition-colors ${tab === id ? 'bg-blue-600 text-white' : 'hover:bg-stone-800 hover:text-white'}`}>
+              {icon}<span className="hidden md:inline">{label}</span>
+              {id === 'requests' && urgentCount > 0 && <span className="ml-auto bg-red-500 text-white text-[10px] font-extrabold rounded-full px-1.5 py-0.5">{urgentCount}</span>}
+              {id === 'inventory' && lowStock.length > 0 && <span className="ml-auto bg-amber-400 text-stone-900 text-[10px] font-extrabold rounded-full px-1.5 py-0.5">{lowStock.length}</span>}
+            </button>
+          ))}
+        </nav>
+        <div className="p-3 md:p-5 border-t border-stone-800 space-y-2">
+          <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-stone-400 hover:text-white"><ExternalLink className="w-3.5 h-3.5"/><span className="hidden md:inline">Stripe dashboard</span></a>
+          <button onClick={() => navigate('home')} className="flex items-center gap-2 text-xs font-bold text-stone-400 hover:text-white"><Home className="w-3.5 h-3.5"/><span className="hidden md:inline">View site</span></button>
+          <button onClick={loadAll} className="flex items-center gap-2 text-xs font-bold text-stone-400 hover:text-white"><Search className="w-3.5 h-3.5"/><span className="hidden md:inline">Refresh data</span></button>
         </div>
-      </div>
+      </aside>
 
-      {note && <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm font-semibold rounded-xl px-4 py-3 mb-6">{note}</div>}
-      {loading ? <p className="text-stone-500 py-12 text-center">Loading…</p> : (
-      <>
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5"><p className="text-xs font-bold text-stone-400 uppercase">Emergencies waiting</p><p className={`text-3xl font-extrabold ${emergencies.filter(r => r.status === 'URGENT').length ? 'text-red-600' : 'text-stone-900'}`}>{emergencies.filter(r => r.status === 'URGENT').length}</p></div>
-        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5"><p className="text-xs font-bold text-stone-400 uppercase">Bookings</p><p className="text-3xl font-extrabold text-stone-900">{bookings.length}</p></div>
-        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5"><p className="text-xs font-bold text-stone-400 uppercase">Shop orders ($)</p><p className="text-3xl font-extrabold text-stone-900">${fmtPrice(revenue)}</p></div>
-        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5"><p className="text-xs font-bold text-stone-400 uppercase">Memberships sold</p><p className="text-3xl font-extrabold text-stone-900">{memberships}</p></div>
-      </div>
+      {/* Content */}
+      <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
+        {note && <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm font-semibold rounded-xl px-4 py-3 mb-5">{note} <button onClick={() => setNote(null)} className="underline ml-1">dismiss</button></div>}
+        {loading ? <p className="text-stone-500 py-16 text-center">Loading…</p> : (<>
 
-      {/* Emergencies */}
-      <div className="mb-10">
-        <h2 className="text-xl font-extrabold text-stone-900 mb-4 flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-red-500"/> Emergency requests</h2>
-        {emergencies.length === 0 ? <p className="text-sm text-stone-400 bg-white rounded-2xl border border-stone-100 p-6">No emergency requests.</p> : (
-          <div className="space-y-3">
-            {emergencies.map(r => (
-              <div key={r.path} className={`bg-white rounded-2xl border p-5 flex flex-wrap items-center gap-4 justify-between ${r.status === 'URGENT' ? 'border-red-200 shadow-md' : 'border-stone-100'}`}>
-                <div className="min-w-0">
-                  <p className="font-bold text-stone-900">{r.issue || 'Plumbing emergency'} <span className={`ml-2 text-xs font-extrabold px-2 py-0.5 rounded-full ${r.status === 'URGENT' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{r.status}</span></p>
-                  <p className="text-sm text-stone-500">{fmtWhen(r)} · {r.address || 'No address'} · <a className="font-semibold text-blue-700" href={`tel:${r.phone}`}>{r.phone}</a>{r.email ? ` · ${r.email}` : ''}</p>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  {r.status === 'URGENT' ? (
-                    <button onClick={() => acceptEmergency(r)} className="bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2.5 rounded-full text-sm flex items-center gap-2"><CheckCircle className="w-4 h-4"/> Accept + Calendar</button>
-                  ) : (
-                    <a href={gcalUrl(r)} target="_blank" rel="noopener noreferrer" className="bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold px-4 py-2.5 rounded-full text-sm flex items-center gap-2"><Calendar className="w-4 h-4"/> Calendar</a>
-                  )}
-                  {r.phone && <a href={smsUrl(r)} className="bg-blue-900 hover:bg-blue-800 text-white font-bold px-4 py-2.5 rounded-full text-sm flex items-center gap-2"><Send className="w-4 h-4"/> Text confirmation</a>}
-                </div>
+        {tab === 'dashboard' && (
+          <div>
+            <h1 className="text-2xl font-extrabold text-stone-900 mb-5">Dashboard</h1>
+            <h2 className="text-xs font-extrabold text-stone-400 uppercase tracking-wider mb-2">Payments (Stripe — card only)</h2>
+            {stripe ? (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
+                <Card label="Gross volume" value={`$${fmtPrice(stripe.grossVolume)}`} />
+                <Card label="Last 30 days" value={`$${fmtPrice(stripe.last30Days)}`} />
+                <Card label="Last 7 days" value={`$${fmtPrice(stripe.last7Days)}`} />
+                <Card label="Payments" value={stripe.paymentCount} />
+                <Card label="Balance (avail + pending)" value={`$${fmtPrice(stripe.availableBalance + stripe.pendingBalance)}`} />
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Inventory */}
-      <div className="mb-10">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <h2 className="text-xl font-extrabold text-stone-900 flex items-center gap-2"><Package className="w-5 h-5 text-blue-700"/> Inventory</h2>
-          <button onClick={seedInventory} disabled={seeding} className="bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold px-4 py-2 rounded-full text-sm">{seeding ? 'Setting up…' : (invList.length ? 'Reset all to 5' : 'Initialize inventory (5 each)')}</button>
-        </div>
-        {lowStock.length > 0 && (
-          <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl px-4 py-3 mb-4 text-sm font-semibold">
-            ⚠️ Buy more: {lowStock.slice(0, 8).map(i => `${i.name || i.id} (${i.stock ?? 0} left)`).join(', ')}{lowStock.length > 8 ? ` +${lowStock.length - 8} more` : ''}
-          </div>
-        )}
-        {invList.length === 0 ? <p className="text-sm text-stone-400 bg-white rounded-2xl border border-stone-100 p-6">No inventory yet — click "Initialize inventory (5 each)" to start tracking all {PRODUCTS.length} items.</p> : (
-          <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-stone-100">
-              <input value={invSearch} onChange={(e) => setInvSearch(e.target.value)} placeholder="Search inventory…" className="w-full max-w-sm border border-stone-200 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+            ) : (
+              <p className="text-sm text-stone-500 bg-white border border-stone-200 rounded-xl p-4 mb-3">{stripeErr ? `Stripe stats: ${stripeErr}` : 'Loading Stripe…'} — <a className="text-blue-700 font-bold underline" href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer">open Stripe dashboard</a></p>
+            )}
+            {stripe && stripe.recent.length > 0 && (
+              <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100 mb-6">
+                {stripe.recent.map((c, i) => (
+                  <div key={i} className="px-4 py-2.5 flex justify-between text-sm"><span className="font-semibold text-stone-700">{c.name}</span><span className="text-stone-400">{c.date}</span><span className="font-bold text-stone-900">${fmtPrice(c.amount)}</span></div>
+                ))}
+              </div>
+            )}
+            <h2 className="text-xs font-extrabold text-stone-400 uppercase tracking-wider mb-2">Business (all payment methods)</h2>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <Card label="Sales (orders)" value={`$${fmtPrice(materialsRevenue)}`} />
+              <Card label="Shop orders" value={orders.length} />
+              <Card label="Bookings" value={bookings.length} />
+              <Card label="Members" value={members.length} />
+              <Card label="Emergencies waiting" value={urgentCount} accent={urgentCount ? 'text-red-600' : undefined} />
             </div>
-            <div className="max-h-[28rem] overflow-y-auto divide-y divide-stone-50">
-              {invVisible.map(i => (
-                <div key={i.id} className={`px-5 py-3 flex items-center justify-between gap-4 ${(i.stock ?? 0) <= 1 ? 'bg-red-50/60' : ''}`}>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-stone-800 truncate">{i.name || i.id}</p>
-                    <p className="text-xs text-stone-400">{i.cat || ''}</p>
+          </div>
+        )}
+
+        {tab === 'customers' && (
+          <div>
+            <h1 className="text-2xl font-extrabold text-stone-900 mb-5">Customers ({customers.length})</h1>
+            <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
+              {customers.length === 0 && <p className="p-6 text-sm text-stone-400">No customer profiles yet (customers appear here after signing in with Google).</p>}
+              {customers.map(c => (
+                <div key={c.uid} className="px-4 py-3 flex items-center gap-3">
+                  {c.photoURL ? <img src={c.photoURL} alt="" className="w-9 h-9 rounded-full"/> : <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center"><User className="w-4 h-4 text-blue-700"/></div>}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-stone-900 truncate">{c.name || 'Customer'} {c.member && <span className="ml-1 text-[10px] font-extrabold bg-blue-900 text-amber-400 px-1.5 py-0.5 rounded-full">MEMBER {c.member.no}</span>}</p>
+                    <p className="text-xs text-stone-400 truncate">{c.email}</p>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    {(i.stock ?? 0) <= 1 && <span className="text-xs font-extrabold text-red-600">LOW — buy more</span>}
-                    <button onClick={() => bumpStock(i.id, -1)} className="p-1.5 rounded-full bg-stone-100 hover:bg-stone-200"><Minus className="w-4 h-4"/></button>
-                    <span className={`font-extrabold w-8 text-center ${(i.stock ?? 0) <= 1 ? 'text-red-600' : 'text-stone-900'}`}>{i.stock ?? 0}</span>
-                    <button onClick={() => bumpStock(i.id, 1)} className="p-1.5 rounded-full bg-stone-100 hover:bg-stone-200"><Plus className="w-4 h-4"/></button>
-                  </div>
+                  <p className="text-xs text-stone-400 shrink-0">joined {c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000).toLocaleDateString() : '—'}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
-      </div>
 
-      {/* Recent bookings & orders */}
-      <div>
-        <h2 className="text-xl font-extrabold text-stone-900 mb-4 flex items-center gap-2"><Calendar className="w-5 h-5 text-blue-700"/> Recent bookings &amp; orders</h2>
-        {bookings.length + orders.length === 0 ? <p className="text-sm text-stone-400 bg-white rounded-2xl border border-stone-100 p-6">Nothing yet.</p> : (
-          <div className="bg-white rounded-2xl border border-stone-100 shadow-sm divide-y divide-stone-50 max-h-96 overflow-y-auto">
-            {[...orders, ...bookings].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 30).map(r => (
-              <div key={r.path} className="px-5 py-3">
-                <p className="text-sm font-semibold text-stone-800">{r.serviceType || 'Booking'} — {r.customerName || 'Customer'}{(r.materialsTotal || 0) > 0 ? ` · $${fmtPrice(r.materialsTotal)}` : ''}</p>
-                <p className="text-xs text-stone-400">{fmtWhen(r)} · {r.date || ''} {r.time || ''} · {r.address || ''}</p>
-              </div>
-            ))}
+        {tab === 'members' && (
+          <div>
+            <h1 className="text-2xl font-extrabold text-stone-900 mb-5">Protection Plan Members ({members.length})</h1>
+            <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
+              {members.length === 0 && <p className="p-6 text-sm text-stone-400">No members yet — they appear here when someone buys the Protection Plan.</p>}
+              {members.map(c => {
+                const expired = c.member.until && c.member.until < new Date().toISOString().slice(0, 10);
+                return (
+                  <div key={c.uid} className="px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-stone-900">{c.member.no} — {c.name || 'Customer'}</p>
+                      <p className="text-xs text-stone-400">{c.email}</p>
+                    </div>
+                    <p className={`text-xs font-bold ${expired ? 'text-red-600' : 'text-green-700'}`}>{expired ? `EXPIRED ${c.member.until}` : `active · renews ${c.member.until}`}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
-      </div>
-      </>
-      )}
+
+        {tab === 'orders' && (
+          <div>
+            <h1 className="text-2xl font-extrabold text-stone-900 mb-5">Service Orders ({orders.length})</h1>
+            <div className="space-y-3">
+              {orders.length === 0 && <p className="p-6 text-sm text-stone-400 bg-white rounded-xl border border-stone-200">No shop orders yet.</p>}
+              {orders.map(r => <ReqRow key={r.path} r={r} />)}
+            </div>
+          </div>
+        )}
+
+        {tab === 'requests' && (
+          <div>
+            <h1 className="text-2xl font-extrabold text-stone-900 mb-5">Requests</h1>
+            <h2 className="text-xs font-extrabold text-red-500 uppercase tracking-wider mb-2 flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5"/> Emergencies</h2>
+            <div className="space-y-3 mb-8">
+              {emergencies.length === 0 && <p className="p-5 text-sm text-stone-400 bg-white rounded-xl border border-stone-200">No emergency requests.</p>}
+              {emergencies.map(r => <ReqRow key={r.path} r={r} emergency />)}
+            </div>
+            <h2 className="text-xs font-extrabold text-stone-400 uppercase tracking-wider mb-2">Service bookings</h2>
+            <div className="space-y-3">
+              {bookings.length === 0 && <p className="p-5 text-sm text-stone-400 bg-white rounded-xl border border-stone-200">No bookings yet.</p>}
+              {bookings.map(r => <ReqRow key={r.path} r={r} />)}
+            </div>
+          </div>
+        )}
+
+        {tab === 'inventory' && (
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+              <h1 className="text-2xl font-extrabold text-stone-900">Inventory</h1>
+              <button onClick={seedInventory} disabled={seeding} className="bg-stone-200 hover:bg-stone-300 text-stone-700 font-bold px-4 py-2 rounded-full text-sm">{seeding ? 'Setting up…' : (invList.length ? 'Reset all to 5' : `Initialize inventory (5 each, ${PRODUCTS.length} items)`)}</button>
+            </div>
+            {lowStock.length > 0 && (
+              <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl px-4 py-3 mb-4 text-sm font-semibold">
+                ⚠️ Buy more: {lowStock.slice(0, 8).map(i => `${i.name || i.id} (${i.stock ?? 0})`).join(', ')}{lowStock.length > 8 ? ` +${lowStock.length - 8} more` : ''}
+              </div>
+            )}
+            {invList.length === 0 ? <p className="text-sm text-stone-400 bg-white rounded-xl border border-stone-200 p-6">No inventory yet — click Initialize to start tracking.</p> : (
+              <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+                <div className="p-3 border-b border-stone-100">
+                  <input value={invSearch} onChange={(e) => setInvSearch(e.target.value)} placeholder="Search inventory…" className="w-full max-w-sm border border-stone-200 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="max-h-[30rem] overflow-y-auto divide-y divide-stone-50">
+                  {invVisible.map(i => (
+                    <div key={i.id} className={`px-4 py-2.5 flex items-center justify-between gap-4 ${(i.stock ?? 0) <= 1 ? 'bg-red-50/60' : ''}`}>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-stone-800 truncate">{i.name || i.id}</p>
+                        <p className="text-[11px] text-stone-400">{i.cat || ''}</p>
+                      </div>
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        {(i.stock ?? 0) <= 1 && <span className="text-[11px] font-extrabold text-red-600">LOW</span>}
+                        <button onClick={() => bumpStock(i.id, -1)} className="p-1.5 rounded-full bg-stone-100 hover:bg-stone-200"><Minus className="w-3.5 h-3.5"/></button>
+                        <span className={`font-extrabold w-7 text-center text-sm ${(i.stock ?? 0) <= 1 ? 'text-red-600' : 'text-stone-900'}`}>{i.stock ?? 0}</span>
+                        <button onClick={() => bumpStock(i.id, 1)} className="p-1.5 rounded-full bg-stone-100 hover:bg-stone-200"><Plus className="w-3.5 h-3.5"/></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        </>)}
+      </main>
     </div>
   );
 }
@@ -2080,12 +2233,20 @@ function ContactView({ user }) {
 
 function AccountView({ user, db, appId, cart = {}, clearCart, navigate }) {
   const [isSimulatedLogin, setIsSimulatedLogin] = useState(false);
+  const [memberInfo, setMemberInfo] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
   const [guestSuccess, setGuestSuccess] = useState(false);
   const initialLoadRef = useRef(true);
+
+  useEffect(() => {
+    if (!db || !user || user.isAnonymous) { setMemberInfo(null); return; }
+    getDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'details'))
+      .then(s => setMemberInfo(s.exists() ? (s.data().member || null) : null))
+      .catch(() => {});
+  }, [user]);
 
   const handleGoogleLogin = async (e) => {
     e.preventDefault();
@@ -2226,9 +2387,15 @@ function AccountView({ user, db, appId, cart = {}, clearCart, navigate }) {
           )}
           <div>
             <h2 className="text-3xl font-bold text-slate-900">Welcome back, {firstName}!</h2>
-            <p className="text-slate-500 mt-1 flex items-center gap-2">
-              <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" /> DMVPipe Preferred Customer
-            </p>
+            {memberInfo ? (
+              <p className="mt-1 inline-flex items-center gap-2 bg-blue-900 text-white text-sm font-bold px-3 py-1 rounded-full">
+                <ShieldCheck className="w-4 h-4 text-amber-400" /> Protection Plan Member · {memberInfo.no} · renews {memberInfo.until}
+              </p>
+            ) : (
+              <p className="text-slate-500 mt-1 flex items-center gap-2">
+                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" /> DMVPipe Preferred Customer
+              </p>
+            )}
           </div>
         </div>
         <button onClick={handleLogout} className="mt-6 md:mt-0 flex items-center gap-2 text-slate-500 hover:text-red-600 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors">
